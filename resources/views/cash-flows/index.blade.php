@@ -96,6 +96,18 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">Sampai Tanggal</label>
                 <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
             </div>
+            <div class="min-w-[100px]">
+                <label class="block text-xs font-bold text-gray-500 mb-1">Urutan</label>
+                <div class="flex border border-gray-200 rounded-lg overflow-hidden h-[38px] bg-white">
+                    <input type="hidden" name="sort" id="sort_input" value="{{ request('sort', 'desc') }}">
+                    <button type="button" onclick="setSort('desc')" id="btn_sort_desc" class="flex-1 flex items-center justify-center transition-colors {{ request('sort', 'desc') === 'desc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terbaru (Urutan Ke Bawah)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7"/></svg>
+                    </button>
+                    <button type="button" onclick="setSort('asc')" id="btn_sort_asc" class="flex-1 flex items-center justify-center border-l border-gray-200 transition-colors {{ request('sort') === 'asc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terlama (Urutan Ke Atas)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 18l7-7 7 7"/></svg>
+                    </button>
+                </div>
+            </div>
             <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Filter</button>
             <a href="{{ $filterRoute }}" class="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium">Reset</a>
         </div>
@@ -194,9 +206,9 @@
             </div>
         </div>
         <div class="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
-            <a id="proofDownloadLink" href="#" target="_blank" download class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-sm">
+            <a id="proofDownloadLink" href="#" download class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-sm">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Unduh / Buka di Tab Baru
+                Unduh Bukti
             </a>
             <button type="button" onclick="closeProofModal()" class="ml-3 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm px-5 py-2 rounded-lg text-sm font-bold transition">Tutup</button>
         </div>
@@ -258,7 +270,7 @@
         modal.classList.remove('opacity-0');
         modal.querySelector('.transform').classList.remove('scale-95');
 
-        downloadLink.href = url;
+        downloadLink.href = url + '?download=1';
 
         loading.classList.remove('hidden');
         iframe.classList.add('hidden');
@@ -341,5 +353,13 @@
     document.addEventListener('DOMContentLoaded', function () {
         if (cashFlowForm) toggleFields();
     });
+
+    window.setSort = function(val) {
+        const sortInput = document.getElementById('sort_input');
+        if (sortInput) {
+            sortInput.value = val;
+            sortInput.closest('form').submit();
+        }
+    };
 </script>
 @endsection

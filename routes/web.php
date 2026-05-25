@@ -120,6 +120,9 @@ Route::get('/file/{path}', function($path) {
     \Illuminate\Support\Facades\Log::info("Requesting file: " . $path);
     if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
         \Illuminate\Support\Facades\Log::info("File exists: " . $path);
+        if (request()->query('download') == 1) {
+            return response()->download(\Illuminate\Support\Facades\Storage::disk('public')->path($path));
+        }
         return response()->file(\Illuminate\Support\Facades\Storage::disk('public')->path($path));
     }
     \Illuminate\Support\Facades\Log::error("File MISSING: " . $path);

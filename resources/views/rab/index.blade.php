@@ -66,6 +66,18 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">Sampai Tanggal</label>
                 <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
             </div>
+            <div class="min-w-[100px]">
+                <label class="block text-xs font-bold text-gray-500 mb-1">Urutan</label>
+                <div class="flex border border-gray-200 rounded-lg overflow-hidden h-[38px] bg-white">
+                    <input type="hidden" name="sort" id="sort_input" value="{{ request('sort', 'desc') }}">
+                    <button type="button" onclick="setSort('desc')" id="btn_sort_desc" class="flex-1 flex items-center justify-center transition-colors {{ request('sort', 'desc') === 'desc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terbaru (Urutan Ke Bawah)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7"/></svg>
+                    </button>
+                    <button type="button" onclick="setSort('asc')" id="btn_sort_asc" class="flex-1 flex items-center justify-center border-l border-gray-200 transition-colors {{ request('sort') === 'asc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terlama (Urutan Ke Atas)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 18l7-7 7 7"/></svg>
+                    </button>
+                </div>
+            </div>
             <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold transition">Filter</button>
             <a href="{{ route('rab.index') }}" class="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium">Reset</a>
         </div>
@@ -214,18 +226,27 @@
 {{-- Modal Detail RAB dari halaman daftar --}}
 @foreach($rabs as $rab)
 <div id="rabDetailModal-{{ $rab->id }}" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden">
-        <div class="px-6 py-4 border-b border-gray-100 flex items-start justify-between gap-4 shrink-0">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
+
+        {{-- HEADER --}}
+        <div class="p-5 border-b border-gray-100 flex items-start justify-between gap-4 shrink-0">
             <div>
-                <h3 class="text-lg font-extrabold text-gray-800">{{ $rab->rab_number }}</h3>
-                <p class="text-sm text-gray-500 mt-1">{{ $rab->expenseType->name ?? '-' }} &bull; {{ $rab->request_date->format('d/m/Y') }}</p>
+                <div class="flex items-center gap-3 mb-1">
+                    <h3 class="text-lg font-extrabold text-gray-800">{{ $rab->rab_number }}</h3>
+                    <span class="{{ $rab->status->badgeClasses() }} text-[10px] font-bold px-3 py-1.5 rounded-lg">{{ $rab->status->label() }}</span>
+                </div>
+                <p class="text-sm text-gray-500">{{ $rab->expenseType->name ?? '-' }} &bull; {{ $rab->request_date->format('d/m/Y') }}</p>
+                <p class="text-xs text-gray-400 mt-0.5">Dibuat oleh: {{ $rab->user->name ?? 'User' }} pada {{ $rab->created_at->format('d M Y, H:i') }}</p>
             </div>
             <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="h-9 w-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition flex-shrink-0" aria-label="Tutup">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
         </div>
 
-        <div class="px-6 py-5 pb-24 flex-1 overflow-y-auto min-h-0">
+        {{-- BODY (scrollable) --}}
+        <div class="p-5 flex-1 overflow-y-auto min-h-0">
+
+            {{-- Info Cards --}}
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
                 <div class="bg-gray-50 rounded-xl p-4">
                     <p class="text-xs font-bold text-gray-400 uppercase">Pembuat</p>
@@ -236,8 +257,8 @@
                     <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->period_label }}</p>
                 </div>
                 <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Status</p>
-                    <p class="mt-1"><span class="{{ $rab->status->badgeClasses() }} text-[10px] font-bold px-3 py-1.5 rounded-lg">{{ $rab->status->label() }}</span></p>
+                    <p class="text-xs font-bold text-gray-400 uppercase">Jenis Pengeluaran</p>
+                    <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->expenseType?->name ?? '-' }}</p>
                 </div>
                 <div class="bg-emerald-50 rounded-xl p-4">
                     <p class="text-xs font-bold text-emerald-600 uppercase">Total</p>
@@ -245,18 +266,27 @@
                 </div>
             </div>
 
+            {{-- Description --}}
             @if($rab->description)
-            <div class="bg-gray-50 rounded-xl p-4 mb-5">
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Keterangan</p>
-                <p class="text-sm text-gray-700">{{ $rab->description }}</p>
+            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-5">
+                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Catatan / Alasan Pengajuan</p>
+                <p class="text-sm text-gray-700 italic leading-relaxed">{{ $rab->description }}</p>
             </div>
             @endif
 
-            <div class="border border-gray-100 rounded-xl overflow-hidden">
+            {{-- ============================================= --}}
+            {{-- Tabel Rincian Item (per Jenis Pengeluaran) --}}
+            {{-- ============================================= --}}
+            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800">Rincian Item</h4>
+                    <h4 class="text-sm font-bold text-gray-800 flex items-center">
+                        <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        Rincian Item RAB
+                    </h4>
                 </div>
+
                 @if($rab->expenseType?->code === 'operasional')
+                {{-- OPERASIONAL TABLE --}}
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-sm text-left min-w-[900px]">
                         <thead>
@@ -281,16 +311,12 @@
                                 ];
                                 $items = $rab->getExpenseItems();
                                 $totalRAB = 0;
-
-                                // Get items that do not match the 5 standard groups (e.g. old data where group_name is null)
                                 $otherItems = $items->filter(function($item) use ($operationalGroups) {
                                     return !in_array($item->group_name, $operationalGroups);
                                 });
                             @endphp
                             @foreach($operationalGroups as $gIdx => $groupName)
-                                @php
-                                    $groupItems = $items->where('group_name', $groupName);
-                                @endphp
+                                @php $groupItems = $items->where('group_name', $groupName); @endphp
                                 @if($groupItems->count() > 0)
                                 <tr class="bg-blue-50/50">
                                     <td class="py-2 px-2 font-bold text-gray-800 text-center">{{ $gIdx + 1 }}.</td>
@@ -310,7 +336,6 @@
                                 @endforeach
                                 @endif
                             @endforeach
-
                             @if($otherItems->count() > 0)
                                 <tr class="bg-gray-100/70">
                                     <td class="py-2 px-2 font-bold text-gray-800 text-center">*</td>
@@ -341,6 +366,7 @@
                 </div>
 
                 @elseif($rab->expenseType?->code === 'petty_cash')
+                {{-- PETTY CASH TABLE --}}
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-sm text-left min-w-[1000px]">
                         <thead>
@@ -358,9 +384,7 @@
                         </thead>
                         <tbody>
                             @forelse($rab->getExpenseItems() as $i => $item)
-                            @php
-                                $totalVal = $item->total > 0 ? $item->total : $item->nominal;
-                            @endphp
+                            @php $totalVal = $item->total > 0 ? $item->total : $item->nominal; @endphp
                             <tr class="border-b border-gray-50">
                                 <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
                                 <td class="py-3 px-4 font-semibold text-gray-800">{{ $item->expense_name }}</td>
@@ -382,6 +406,7 @@
                 </div>
 
                 @elseif($rab->expenseType?->code === 'gaji')
+                {{-- SALARY TABLE --}}
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-sm text-left min-w-[1200px]">
                         <thead>
@@ -401,9 +426,7 @@
                         </thead>
                         <tbody>
                             @forelse($rab->getExpenseItems() as $i => $item)
-                            @php
-                                $totalVal = $item->total_salary > 0 ? $item->total_salary : $item->salary_nominal;
-                            @endphp
+                            @php $totalVal = $item->total_salary > 0 ? $item->total_salary : $item->salary_nominal; @endphp
                             <tr class="border-b border-gray-50">
                                 <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
                                 <td class="py-3 px-4 font-semibold text-gray-800">{{ $item->employee_name }}</td>
@@ -427,6 +450,7 @@
                 </div>
 
                 @elseif($rab->expenseType?->code === 'bulanan')
+                {{-- MONTHLY TABLE --}}
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-sm text-left min-w-[900px]">
                         <thead>
@@ -467,11 +491,10 @@
                 </div>
                 @endif
             </div>
-            </div>
 
             {{-- Approval History --}}
             @if($rab->approvals->count() > 0)
-            <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
+            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <h4 class="text-sm font-bold text-gray-800">Riwayat Approval</h4>
                 </div>
@@ -495,7 +518,7 @@
 
             {{-- Edit History --}}
             @if($rab->auditLogs->count() > 0)
-            <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
+            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <h4 class="text-sm font-bold text-gray-800">Riwayat Pengeditan</h4>
                 </div>
@@ -513,7 +536,7 @@
 
             {{-- Payment Info --}}
             @if($rab->payment)
-            <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
+            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
                     <h4 class="text-sm font-bold text-gray-800">Informasi Pembayaran</h4>
                 </div>
@@ -533,7 +556,7 @@
             @endif
 
             {{-- Catatan Diskusi --}}
-            <div class="mt-6 border border-gray-100 rounded-xl overflow-hidden">
+            <div class="border border-gray-100 rounded-xl overflow-hidden">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                     <h4 class="text-sm font-bold text-gray-800">Catatan Diskusi ({{ $rab->discussions->count() }})</h4>
                 </div>
@@ -572,6 +595,21 @@
             </div>
 
         </div>
+
+        {{-- FOOTER (Admin Action Buttons) --}}
+        <div class="p-5 border-t border-gray-100 bg-white shrink-0">
+            <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                {{-- Download PDF --}}
+                <a href="{{ route('rab.export-pdf', $rab) }}" target="_blank" class="text-red-600 hover:text-red-800 font-bold text-sm flex items-center transition bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-xl">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Simpan / Cetak PDF
+                </a>
+
+                <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="w-full sm:w-auto bg-gray-100 text-gray-600 px-8 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition text-center">
+                    Tutup
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -601,7 +639,10 @@
             <img id="rabProofImage" src="" alt="Bukti Bayar" class="hidden max-w-full max-h-[70vh] object-contain rounded-xl bg-white shadow">
         </div>
         <div class="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
-            <a id="rabProofOpenLink" href="#" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition">Buka di Tab Baru</a>
+            <a id="rabProofOpenLink" href="#" download class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-sm">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Unduh Bukti
+            </a>
             <button type="button" onclick="closeRabProofModal()" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-5 py-2 rounded-lg text-sm font-bold transition">Tutup</button>
         </div>
     </div>
@@ -699,7 +740,7 @@
         const frame = document.getElementById('rabProofFrame');
         const image = document.getElementById('rabProofImage');
         document.getElementById('rabProofTitle').innerText = title || 'Bukti Bayar';
-        document.getElementById('rabProofOpenLink').href = url;
+        document.getElementById('rabProofOpenLink').href = url + '?download=1';
 
         frame.classList.add('hidden');
         image.classList.add('hidden');
@@ -778,6 +819,14 @@
             openRabModal('rabDetailModal-' + openRabId);
         }
     });
+
+    window.setSort = function(val) {
+        const sortInput = document.getElementById('sort_input');
+        if (sortInput) {
+            sortInput.value = val;
+            sortInput.closest('form').submit();
+        }
+    };
 </script>
 
 {{-- Sertakan Scripts untuk Buat RAB --}}

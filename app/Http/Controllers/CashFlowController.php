@@ -28,9 +28,10 @@ class CashFlowController extends Controller
             $query->whereDate('transaction_date', '<=', $request->end_date);
         }
 
+        $sortDir = $request->input('sort') === 'asc' ? 'asc' : 'desc';
         $cashFlows = $query
-            ->latest('transaction_date')
-            ->latest('id')
+            ->orderBy('transaction_date', $sortDir)
+            ->orderBy('id', $sortDir)
             ->paginate(20);
         $totalDebit = CashFlow::sum('debit');
         $totalCredit = CashFlow::sum('credit');

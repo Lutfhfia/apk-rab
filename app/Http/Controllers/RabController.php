@@ -60,7 +60,8 @@ class RabController extends Controller
             $query->whereDate('request_date', '<=', $request->end_date);
         }
 
-        $rabs = $query->latest('created_at')->paginate(15);
+        $sortDir = $request->input('sort') === 'asc' ? 'asc' : 'desc';
+        $rabs = $query->orderBy('created_at', $sortDir)->paginate(15);
         $expenseTypes = ExpenseType::where('is_active', true)->get();
         $submittedRabForWhatsApp = session('submitted_rab_id')
             ? Rab::with([
@@ -138,7 +139,8 @@ class RabController extends Controller
             $query->whereDate('request_date', '<=', $request->end_date);
         }
 
-        $rabs = $query->latest('created_at')->paginate(15);
+        $sortDir = $request->input('sort') === 'asc' ? 'asc' : 'desc';
+        $rabs = $query->orderBy('created_at', $sortDir)->paginate(15);
         $expenseTypes = ExpenseType::where('is_active', true)->get();
 
         $statusCounts = Rab::select('status', DB::raw('count(*) as count'))
@@ -581,7 +583,7 @@ class RabController extends Controller
         $companyAddress = \App\Models\Setting::getValue('company_address', '-');
         $companyPhone   = \App\Models\Setting::getValue('company_phone', '-');
         $companyEmail   = \App\Models\Setting::getValue('company_email', '-');
-        $signerName     = 'Rahmad Hidayad';
+        $signerName     = 'Mery Eryanti';
         $signerPosition = 'Manajer Keuangan';
 
         $data = compact(

@@ -37,7 +37,7 @@ class PaymentController extends Controller
             'payment_method' => 'required|string',
             'recipient_account' => 'nullable|string',
             'recipient_name' => 'nullable|string',
-            'proof_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'proof_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:100',
             'notes' => 'nullable|string',
         ]);
 

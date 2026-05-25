@@ -36,11 +36,12 @@ class ReportExportController extends Controller
         $endDate = Carbon::create($year, $month, 1)->endOfMonth();
         $startDate = Carbon::create($year, $month, 1)->subMonths($range - 1)->startOfMonth();
 
+        $sortDir = $request->input('sort', 'asc') === 'desc' ? 'desc' : 'asc';
         // Ambil semua transaksi arus kas pada periode
         $cfQuery = CashFlow::with(['rab', 'rab.expenseType'])
             ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->orderBy('transaction_date')
-            ->orderBy('id');
+            ->orderBy('transaction_date', $sortDir)
+            ->orderBy('id', $sortDir);
 
         if ($search) {
             $cfQuery->where(function ($q) use ($search) {
@@ -169,7 +170,7 @@ class ReportExportController extends Controller
         $companyAddress = Setting::getValue('company_address', '-');
         $companyPhone   = Setting::getValue('company_phone', '-');
         $companyEmail   = Setting::getValue('company_email', '-');
-        $signerName     = 'Rahmad Hidayad';
+        $signerName     = 'Mery Eryanti';
         $signerPosition = 'Manajer Keuangan';
 
         // Nomor laporan
