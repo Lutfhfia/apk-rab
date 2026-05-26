@@ -137,7 +137,7 @@ class ReportExportController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Keuangan yang dapat mengunduh PDF arus kas.');
+        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Operasional yang dapat mengunduh PDF arus kas.');
 
         $month = $request->input('month', now()->month);
         $year  = $request->input('year', now()->year);
@@ -171,7 +171,7 @@ class ReportExportController extends Controller
         $companyPhone   = Setting::getValue('company_phone', '-');
         $companyEmail   = Setting::getValue('company_email', '-');
         $signerName     = 'Mery Eryanti';
-        $signerPosition = 'Manajer Keuangan';
+        $signerPosition = 'Manajer Operasional';
 
         // Nomor laporan
         $romanMonths = [

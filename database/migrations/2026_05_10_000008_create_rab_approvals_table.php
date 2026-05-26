@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('rab_id')->constrained('rabs')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->enum('role', ['manajer_keuangan', 'direktur']);
+            $table->enum('role', ['manajer_operasional', 'direktur']);
             $table->enum('approval_level', ['manager', 'director']);
             $table->enum('status', ['approved', 'rejected']);
             $table->text('notes')->nullable();

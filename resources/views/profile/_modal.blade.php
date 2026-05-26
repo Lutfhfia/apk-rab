@@ -58,17 +58,7 @@
                     <input type="email" name="email" value="{{ old('email', Auth::user()->email) }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                 </div>
 
-                <div class="p-4 bg-amber-50 rounded-xl border border-amber-100 mt-4 space-y-3">
-                    <p class="text-xs font-bold text-amber-700">Ganti Password (opsional)</p>
-                    <div>
-                        <label class="block text-xs font-bold text-amber-600 mb-1">Password Baru</label>
-                        <input type="password" name="password" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#2D3047] focus:outline-none" placeholder="Minimal 6 karakter">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-amber-600 mb-1">Konfirmasi Password Baru</label>
-                        <input type="password" name="password_confirmation" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-[#2D3047] focus:outline-none" placeholder="Ulangi password baru">
-                    </div>
-                </div>
+
 
                 <div class="flex items-center justify-end space-x-3 mt-6 pt-5">
                     <button type="button" onclick="document.getElementById('profileModal').style.display='none'" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-bold transition">Batal</button>

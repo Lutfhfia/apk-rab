@@ -44,15 +44,15 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/rab-notifications/{notification}', [RabNotificationController::class, 'open'])->name('rab.notifications.open');
     Route::get('/dashboard/chart-data', [DashboardController::class, 'chartData'])->name('dashboard.chart-data');
 
-    Route::middleware([CheckRole::class . ':admin_keuangan,manajer_keuangan'])->group(function () {
+    Route::middleware([CheckRole::class . ':admin_keuangan,manajer_operasional'])->group(function () {
         Route::get('/rab/{rab}/export-pdf', [RabController::class, 'exportPdf'])->name('rab.export-pdf');
     });
 
-    Route::middleware([CheckRole::class . ':manajer_keuangan,direktur'])->group(function () {
+    Route::middleware([CheckRole::class . ':manajer_operasional,direktur'])->group(function () {
         Route::get('/report', [ReportExportController::class, 'index'])->name('report.index');
     });
 
-    Route::middleware([CheckRole::class . ':manajer_keuangan'])->group(function () {
+    Route::middleware([CheckRole::class . ':manajer_operasional'])->group(function () {
         Route::get('/report/export-pdf', [ReportExportController::class, 'exportPdf'])->name('report.export-pdf');
     });
 
@@ -70,8 +70,8 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
     });
 
-    // ── MANAJER KEUANGAN ──
-    Route::middleware([CheckRole::class . ':manajer_keuangan'])->group(function () {
+    // ── MANAJER OPERASIONAL ──
+    Route::middleware([CheckRole::class . ':manajer_operasional'])->group(function () {
         Route::get('/manajer/dashboard', [DashboardController::class, 'manajer'])->name('manajer.dashboard');
 
         // Daftar RAB (read-only list)

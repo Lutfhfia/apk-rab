@@ -316,6 +316,17 @@
                     document.getElementById('imageLightbox').style.display = 'none';
                 }
             });
+
+            // Session Keep-Alive ping to prevent CSRF timeout (every 5 minutes)
+            setInterval(function() {
+                fetch('/')
+                    .then(response => {
+                        console.log('Session refreshed');
+                    })
+                    .catch(error => {
+                        console.warn('Session refresh failed', error);
+                    });
+            }, 300000); // 5 minutes
         });
     </script>
 

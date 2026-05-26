@@ -16,9 +16,9 @@ class IsManku
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Pengecekan apakah yang login adalah manajer_keuangan
-        if (Auth::user()->role !== 'manajer_keuangan') {
-            abort(403, 'Akses Ditolak. Hanya Manajer Keuangan yang bisa mengakses halaman ini.');
+        // Pengecekan apakah yang login adalah manajer_operasional
+        if (Auth::user()->role !== 'manajer_operasional') {
+            abort(403, 'Akses Ditolak. Hanya Manajer Operasional yang bisa mengakses halaman ini.');
         }
 
         return $next($request);

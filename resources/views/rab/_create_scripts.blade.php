@@ -100,10 +100,31 @@ function parseMoney(val) {
     return parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0;
 }
 
-// Before form submit: convert formatted money back to raw numbers
-document.getElementById('rabForm')?.addEventListener('submit', function() {
-    document.querySelectorAll('.money-input').forEach(input => {
+// Before form submit: convert formatted money back to raw numbers & prevent double submit
+document.getElementById('rabForm')?.addEventListener('submit', function(e) {
+    // 1. Convert money inputs back to numbers
+    this.querySelectorAll('.money-input').forEach(input => {
         input.value = parseMoney(input.value);
+    });
+
+    // 2. Prevent double submission by disabling buttons and showing loading
+    const submitBtns = this.querySelectorAll('.submit-btn');
+    submitBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+    });
+
+    // Change text of active submission button to loading
+    const actionVal = document.getElementById('rabFormAction').value;
+    submitBtns.forEach(btn => {
+        if (actionVal === 'submit' && btn.classList.contains('bg-emerald-600')) {
+            const txt = btn.querySelector('.text-submit');
+            if (txt) txt.textContent = 'Memproses...';
+            const icon = btn.querySelector('.icon-submit');
+            if (icon) icon.outerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        } else if (actionVal === 'draft' && btn.classList.contains('bg-gray-700')) {
+            btn.textContent = 'Menyimpan...';
+        }
     });
 });
 
@@ -127,9 +148,19 @@ expenseTypeSelect?.addEventListener('change', function() {
     currentType = code;
     
     if (code === 'operasional') {
+        // Clear unused non-operational table inputs so they don't block validation
+        tableBody.innerHTML = '';
+        tableHead.innerHTML = '';
+        document.getElementById('grandTotal').textContent = 'Rp 0';
+        
         document.getElementById('operationalTableContainer').style.display = 'block';
         renderOperationalGroups();
     } else if (configs[code]) {
+        // Clear unused operational group inputs so they don't block validation
+        const wrapper = document.getElementById('operationalGroupsWrapper');
+        if (wrapper) wrapper.innerHTML = '';
+        document.getElementById('operationalGrandTotal').textContent = 'Rp 0';
+        
         rowCount = 0;
         const cfg = configs[code];
         tableTitle.textContent = cfg.title;

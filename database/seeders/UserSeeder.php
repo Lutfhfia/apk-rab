@@ -18,10 +18,10 @@ class UserSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'Manajer Keuangan',
+                'name' => 'Manajer Operasional',
                 'email' => 'manajer@rab-sbk.com',
                 'password' => 'password',
-                'role' => 'manajer_keuangan',
+                'role' => 'manajer_operasional',
                 'is_active' => true,
             ],
             [

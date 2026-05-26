@@ -92,7 +92,7 @@
                         @php
                             $roleColors = [
                                 'admin_keuangan' => 'bg-blue-100 text-blue-700',
-                                'manajer_keuangan' => 'bg-indigo-100 text-indigo-700',
+                                'manajer_operasional' => 'bg-indigo-100 text-indigo-700',
                                 'direktur' => 'bg-purple-100 text-purple-700',
                             ];
                         @endphp

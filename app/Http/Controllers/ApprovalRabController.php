@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 class ApprovalRabController extends Controller
 {
     /**
-     * Approve RAB by Manajer Keuangan.
+     * Approve RAB by Manajer Operasional.
      */
     public function approveByManager(Request $request, Rab $rab)
     {
@@ -36,7 +36,7 @@ class ApprovalRabController extends Controller
             RabApproval::create([
                 'rab_id' => $rab->id,
                 'user_id' => auth()->id(),
-                'role' => 'manajer_keuangan',
+                'role' => 'manajer_operasional',
                 'approval_level' => 'manager',
                 'status' => ApprovalStatus::APPROVED,
                 'notes' => $request->notes,
@@ -50,7 +50,7 @@ class ApprovalRabController extends Controller
 
             AuditLog::log(
                 'approve_manager',
-                "RAB {$rab->rab_number} disetujui oleh Manajer Keuangan " . auth()->user()->name,
+                "RAB {$rab->rab_number} disetujui oleh Manajer Operasional " . auth()->user()->name,
                 rabId: $rab->id
             );
 
@@ -62,7 +62,7 @@ class ApprovalRabController extends Controller
             $rab->notifyRole(
                 UserRole::DIREKTUR->value,
                 'RAB perlu diperiksa Direktur',
-                "Manager Keuangan menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur."
+                "Manager Operasional menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur."
             );
 
             DB::commit();
@@ -85,7 +85,7 @@ class ApprovalRabController extends Controller
         }
 
         if ($rab->status !== RabStatus::DISETUJUI_MANAJER) {
-            return back()->with('error', 'RAB ini belum disetujui oleh Manajer Keuangan.');
+            return back()->with('error', 'RAB ini belum disetujui oleh Manajer Operasional.');
         }
 
         $request->validate([
@@ -160,7 +160,7 @@ class ApprovalRabController extends Controller
                 'rab_id' => $rab->id,
                 'user_id' => auth()->id(),
                 'role' => $userRole,
-                'approval_level' => $userRole === 'manajer_keuangan' ? 'manager' : 'director',
+                'approval_level' => $userRole === 'manajer_operasional' ? 'manager' : 'director',
                 'status' => ApprovalStatus::REJECTED,
                 'notes' => $request->notes,
                 'rejected_at' => now(),

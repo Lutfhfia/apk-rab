@@ -7,13 +7,13 @@ Dokumen ini menjelaskan rancangan logika alur kerja **Opsi A (Sistem Antrean Ber
 
 ## 1. Arsitektur Alur Logika Persetujuan (Opsi A)
 
-Pada **Opsi A (Pool System)**, proses approval bersifat dinamis dan mandiri. Semua manajer keuangan memiliki wewenang yang sejajar untuk memproses antrean persetujuan.
+Pada **Opsi A (Pool System)**, proses approval bersifat dinamis dan mandiri. Semua manajer operasional memiliki wewenang yang sejajar untuk memproses antrean persetujuan.
 
 ```text
   [ Admin Keuangan ]
          │ (1. Mengajukan RAB)
          ▼
-   [ Status: DIAJUKAN ]
+   [ Status: DIAJUKAN ] ◄────► (Admin masih bisa Edit & Hapus sebelum ditindaklanjuti atasan)
          │
          ├─────────────────────────────────────────┐
          ▼ (Bisa diakses oleh)                     ▼ (Bisa diakses oleh)
@@ -34,7 +34,7 @@ Pada **Opsi A (Pool System)**, proses approval bersifat dinamis dan mandiri. Sem
 ```
 
 ### Karakteristik Utama Sistem:
-1. **Admins (Admin 1, Admin 2, dst.):** Membuat draf RAB. RAB disimpan dengan pencatatan `user_id` pembuat untuk akuntabilitas kepemilikan dokumen.
+1. **Admins (Admin 1, Admin 2, dst.):** Membuat draf RAB. Admin memiliki wewenang penuh untuk mengedit status `DRAFT`, `DITOLAK`, dan `DIAJUKAN` serta menghapus status `DRAFT` dan `DIAJUKAN` (selama belum disetujui/ditolak oleh Manajer/Direktur). RAB disimpan dengan pencatatan `user_id` pembuat untuk akuntabilitas kepemilikan dokumen.
 2. **Managers (Manajer 1, Manajer 2, dst.):** Semua RAB berstatus `diajukan` dikumpulkan di satu dashboard antrean yang sama. Manajer pertama yang memproses (klik Approve/Reject) akan mengunci data tersebut.
 3. **Directors (Direktur):** Menerima limpahan RAB yang sudah berstatus `disetujui_manajer` untuk diberikan keputusan akhir.
 

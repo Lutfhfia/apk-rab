@@ -91,7 +91,7 @@ Sistem approval digunakan untuk proses persetujuan bertingkat.
 ```text
 Admin Keuangan
         ↓
-Manajer Keuangan
+Manajer Operasional
         ↓
 Direktur
         ↓
@@ -193,7 +193,7 @@ Aplikasi menggunakan sistem pembagian hak akses berdasarkan role pengguna.
 | Role | Fungsi |
 |---|---|
 | Admin Keuangan | Membuat dan mengelola RAB |
-| Manajer Keuangan | Approval tahap pertama |
+| Manajer Operasional | Approval tahap pertama |
 | Direktur | Approval akhir |
 
 ## Teknologi yang Digunakan

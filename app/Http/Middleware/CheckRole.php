@@ -10,7 +10,7 @@ class CheckRole
 {
     /**
      * Handle an incoming request.
-     * Usage: CheckRole::class . ':admin_keuangan,manajer_keuangan'
+     * Usage: CheckRole::class . ':admin_keuangan,manajer_operasional'
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {

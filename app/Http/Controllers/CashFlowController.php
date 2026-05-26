@@ -44,7 +44,7 @@ class CashFlowController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Keuangan yang dapat mencatat dana masuk.');
+        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Operasional yang dapat mencatat dana masuk.');
 
         $request->merge([
             'amount' => $this->normalizeMoney($request->amount),

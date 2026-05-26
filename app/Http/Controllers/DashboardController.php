@@ -381,7 +381,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Manajer Keuangan Dashboard.
+     * Manajer Operasional Dashboard.
      */
     public function manajer(Request $request)
     {

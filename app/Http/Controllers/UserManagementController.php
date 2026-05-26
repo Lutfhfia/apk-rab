@@ -60,7 +60,7 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role' => ['required', Rule::in([UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_KEUANGAN->value])],
+            'role' => ['required', Rule::in([UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_OPERASIONAL->value])],
         ]);
 
         User::create([
@@ -91,7 +91,7 @@ class UserManagementController extends Controller
     {
         $user = User::withTrashed()->findOrFail($id);
 
-        $allowedRoles = [UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_KEUANGAN->value];
+        $allowedRoles = [UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_OPERASIONAL->value];
         if ($user->role === UserRole::DIREKTUR) {
             $allowedRoles[] = UserRole::DIREKTUR->value;
         }

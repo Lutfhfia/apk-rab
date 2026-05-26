@@ -219,7 +219,7 @@ class RabController extends Controller
                     "Mohon persetujuan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
                 );
                 $rab->notifyRole(
-                    UserRole::MANAJER_KEUANGAN->value,
+                    UserRole::MANAJER_OPERASIONAL->value,
                     'RAB baru perlu diperiksa',
                     'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
                 );
@@ -274,8 +274,13 @@ class RabController extends Controller
 
     public function edit(Rab $rab)
     {
-        // Only allow editing draft or rejected RABs
-        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK])) {
+        // Only allow Admin Keuangan to edit
+        if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
+            abort(403, 'Hanya Admin Keuangan yang dapat mengedit RAB.');
+        }
+
+        // Only allow editing draft, rejected, or submitted (diajukan) RABs
+        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK, RabStatus::DIAJUKAN])) {
             return back()->with('error', 'RAB ini tidak dapat diedit.');
         }
 
@@ -290,8 +295,13 @@ class RabController extends Controller
      */
     public function update(Request $request, Rab $rab)
     {
-        // Only allow updating draft or rejected RABs
-        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK])) {
+        // Only allow Admin Keuangan to update
+        if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
+            abort(403, 'Hanya Admin Keuangan yang dapat mengedit RAB.');
+        }
+
+        // Only allow updating draft, rejected, or submitted (diajukan) RABs
+        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK, RabStatus::DIAJUKAN])) {
             return back()->with('error', 'RAB ini tidak dapat diedit.');
         }
 
@@ -350,7 +360,7 @@ class RabController extends Controller
                     "Mohon pemeriksaan ulang RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
                 );
                 $rab->notifyRole(
-                    UserRole::MANAJER_KEUANGAN->value,
+                    UserRole::MANAJER_OPERASIONAL->value,
                     'RAB revisi perlu diperiksa',
                     'Admin Keuangan ' . auth()->user()->name . " mengajukan kembali RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
                 );
@@ -380,8 +390,13 @@ class RabController extends Controller
      */
     public function destroy(Rab $rab)
     {
-        if ($rab->status !== RabStatus::DRAFT) {
-            return back()->with('error', 'Hanya RAB berstatus Draft yang dapat dihapus.');
+        // Only allow Admin Keuangan to delete
+        if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
+            abort(403, 'Hanya Admin Keuangan yang dapat menghapus RAB.');
+        }
+
+        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DIAJUKAN])) {
+            return back()->with('error', 'Hanya RAB berstatus Draft atau Diajukan yang dapat dihapus.');
         }
 
         $rab->delete();
@@ -421,7 +436,7 @@ class RabController extends Controller
             "Mohon persetujuan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
         );
         $rab->notifyRole(
-            UserRole::MANAJER_KEUANGAN->value,
+            UserRole::MANAJER_OPERASIONAL->value,
             'RAB baru perlu diperiksa',
             'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
         );
@@ -573,7 +588,7 @@ class RabController extends Controller
         abort_unless(
             auth()->user()?->isAdmin() || auth()->user()?->isManajer(),
             403,
-            'Hanya Admin Keuangan dan Manajer Keuangan yang dapat mengunduh PDF RAB.'
+            'Hanya Admin Keuangan dan Manajer Operasional yang dapat mengunduh PDF RAB.'
         );
 
         $rab->load(['user', 'expenseType', 'payment']);
@@ -584,7 +599,7 @@ class RabController extends Controller
         $companyPhone   = \App\Models\Setting::getValue('company_phone', '-');
         $companyEmail   = \App\Models\Setting::getValue('company_email', '-');
         $signerName     = 'Mery Eryanti';
-        $signerPosition = 'Manajer Keuangan';
+        $signerPosition = 'Manajer Operasional';
 
         $data = compact(
             'rab', 'expenseItems',

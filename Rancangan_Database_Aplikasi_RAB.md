@@ -14,7 +14,7 @@ Tabel ini digunakan untuk menyimpan data pengguna yang dapat mengakses aplikasi.
 - `name` VARCHAR
 - `email` VARCHAR, Unique
 - `password` VARCHAR
-- `role` ENUM: `admin_keuangan`, `manajer_keuangan`, `direktur`
+- `role` ENUM: `admin_keuangan`, `manajer_operasional`, `direktur`
 - `is_active` BOOLEAN, default `true`
 - `remember_token` VARCHAR, nullable
 - `created_at` TIMESTAMP
@@ -23,7 +23,7 @@ Tabel ini digunakan untuk menyimpan data pengguna yang dapat mengakses aplikasi.
 
 Contoh role:
 - Admin Keuangan
-- Manajer Keuangan
+- Manajer Operasional
 - Direktur
 
 ---
@@ -238,7 +238,7 @@ Tabel ini menyimpan riwayat approval atau penolakan RAB.
 - `id` BIGINT, Primary Key
 - `rab_id` BIGINT, Foreign Key ke `rabs.id`
 - `user_id` BIGINT, Foreign Key ke `users.id`
-- `role` ENUM: `manajer_keuangan`, `direktur`
+- `role` ENUM: `manajer_operasional`, `direktur`
 - `approval_level` ENUM: `manager`, `director`
 - `status` ENUM: `approved`, `rejected`
 - `notes` TEXT, nullable
@@ -248,7 +248,7 @@ Tabel ini menyimpan riwayat approval atau penolakan RAB.
 - `updated_at` TIMESTAMP
 
 Ketentuan:
-- Approval tahap pertama dilakukan oleh Manajer Keuangan.
+- Approval tahap pertama dilakukan oleh Manajer Operasional.
 - Approval akhir dilakukan oleh Direktur.
 - Jika ditolak, field `notes` wajib diisi.
 

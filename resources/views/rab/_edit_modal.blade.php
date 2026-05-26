@@ -14,6 +14,7 @@
             <form method="POST" action="{{ route('rab.update', $rab) }}" id="rabForm-{{ $rab->id }}">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="action" id="rabFormAction-{{ $rab->id }}" value="submit">
 
     {{-- Info Penolakan, Riwayat, & Diskusi --}}
     @if($rab->status === \App\Enums\RabStatus::DITOLAK)
@@ -191,13 +192,22 @@
     </div>
 
     {{-- Action Buttons --}}
-    <div class="flex items-center justify-end space-x-3">
+    <div class="flex items-center justify-end space-x-3 mt-8">
         <button type="button" onclick="closeEditRabModal('editRabModal-{{ $rab->id }}')" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-xl text-sm font-bold transition">Batal</button>
-        <button type="submit" name="action" value="draft" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition">Perbarui Draft</button>
-        <button type="submit" name="action" value="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-            Ajukan RAB
-        </button>
+        
+        @if($rab->status === \App\Enums\RabStatus::DIAJUKAN)
+            <button type="submit" onclick="document.getElementById('rabFormAction-{{ $rab->id }}').value = 'draft'" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition submit-btn">Kembalikan ke Draft</button>
+            <button type="submit" onclick="document.getElementById('rabFormAction-{{ $rab->id }}').value = 'submit'" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center submit-btn">
+                <svg class="w-4 h-4 mr-2 icon-submit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                <span class="text-submit">Perbarui Pengajuan</span>
+            </button>
+        @else
+            <button type="submit" onclick="document.getElementById('rabFormAction-{{ $rab->id }}').value = 'draft'" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition submit-btn">Perbarui Draft</button>
+            <button type="submit" onclick="document.getElementById('rabFormAction-{{ $rab->id }}').value = 'submit'" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center submit-btn">
+                <svg class="w-4 h-4 mr-2 icon-submit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                <span class="text-submit">Ajukan RAB</span>
+            </button>
+        @endif
     </div>
 </form>
         </div>
@@ -313,9 +323,30 @@ function parseMoney(val) {
     if (!val) return 0;
     return parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0;
 }
-document.getElementById('rabForm-{{ $rab->id }}').addEventListener('submit', function() {
+document.getElementById('rabForm-{{ $rab->id }}').addEventListener('submit', function(e) {
+    // 1. Convert money inputs back to numbers
     this.querySelectorAll('.money-input').forEach(input => {
         input.value = parseMoney(input.value);
+    });
+
+    // 2. Prevent double submission by disabling buttons and showing loading
+    const submitBtns = this.querySelectorAll('.submit-btn');
+    submitBtns.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-70', 'cursor-not-allowed');
+    });
+
+    // Change text of active submission button to loading
+    const actionVal = document.getElementById('rabFormAction-{{ $rab->id }}').value;
+    submitBtns.forEach(btn => {
+        if (actionVal === 'submit' && btn.classList.contains('bg-emerald-600')) {
+            const txt = btn.querySelector('.text-submit');
+            if (txt) txt.textContent = 'Memproses...';
+            const icon = btn.querySelector('.icon-submit');
+            if (icon) icon.outerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+        } else if (actionVal === 'draft' && btn.classList.contains('bg-gray-700')) {
+            btn.textContent = 'Menyimpan...';
+        }
     });
 });
 

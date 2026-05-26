@@ -8,7 +8,7 @@
 
 Aplikasi Rancangan Anggaran Biaya (RAB) berbasis website dirancang untuk membantu proses pengajuan, persetujuan, realisasi pembayaran, pencatatan arus kas, dan pembuatan laporan RAB secara digital. Sistem ini digunakan untuk menggantikan proses manual yang sebelumnya dilakukan menggunakan spreadsheet, pencatatan terpisah, serta komunikasi langsung antarbagian.
 
-Aplikasi ini memiliki tiga aktor utama, yaitu **Admin Keuangan**, **Manajer Keuangan**, dan **Direktur**. Admin Keuangan bertugas membuat dan mengelola pengajuan RAB. Manajer Keuangan bertugas melakukan pemeriksaan dan persetujuan tahap pertama. Direktur bertugas memberikan persetujuan akhir sebelum RAB dapat direalisasikan pembayarannya.
+Aplikasi ini memiliki tiga aktor utama, yaitu **Admin Keuangan**, **Manajer Operasional**, dan **Direktur**. Admin Keuangan bertugas membuat dan mengelola pengajuan RAB. Manajer Operasional bertugas melakukan pemeriksaan dan persetujuan tahap pertama. Direktur bertugas memberikan persetujuan akhir sebelum RAB dapat direalisasikan pembayarannya.
 
 Secara umum, alur kerja sistem adalah sebagai berikut:
 
@@ -27,7 +27,7 @@ Secara umum, alur kerja sistem adalah sebagai berikut:
           │
           ▼
 ┌────────────────────┐
-│  Manajer Keuangan  │
+│ Manajer Operasional│
 │  Review RAB        │
 │  Setujui / Tolak   │
 └─────────┬──────────┘
@@ -90,7 +90,7 @@ Sistem memiliki tiga role utama, yaitu:
 | No | Role | Fungsi Utama |
 |---|---|---|
 | 1 | Admin Keuangan | Membuat RAB, mengajukan RAB, mengelola pembayaran, arus kas, dan laporan |
-| 2 | Manajer Keuangan | Melakukan pemeriksaan dan approval tahap pertama |
+| 2 | Manajer Operasional | Melakukan pemeriksaan dan approval tahap pertama |
 | 3 | Direktur | Melakukan approval akhir terhadap RAB yang telah disetujui manajer |
 
 ### 1.3 Hak Akses Admin Keuangan
@@ -100,19 +100,20 @@ Admin Keuangan memiliki hak akses sebagai berikut:
 - membuka dashboard admin;
 - membuat RAB baru;
 - menyimpan RAB sebagai draft;
-- mengedit RAB berstatus draft atau revisi;
-- mengajukan RAB ke Manajer Keuangan;
+- mengedit RAB berstatus draft, ditolak (revisi), atau diajukan (sebelum ditinjau oleh atasan);
+- menghapus RAB berstatus draft atau diajukan (sebelum ditinjau oleh atasan);
+- mengajukan RAB ke Manajer Operasional;
 - melihat detail RAB;
 - melihat status pengajuan RAB;
-- mengunggah bukti pembayaran;
+- mengunggah bukti pembayaran (maksimal 100KB, format Gambar/PDF);
 - mencatat arus kas;
 - melihat riwayat RAB;
 - melakukan export laporan;
 - mengelola data pengguna apabila diberi akses tambahan.
 
-### 1.4 Hak Akses Manajer Keuangan
+### 1.4 Hak Akses Manajer Operasional
 
-Manajer Keuangan memiliki hak akses sebagai berikut:
+Manajer Operasional memiliki hak akses sebagai berikut:
 
 - membuka dashboard manajer;
 - melihat daftar RAB yang menunggu persetujuan;
@@ -157,9 +158,9 @@ Dashboard Admin Keuangan menampilkan informasi:
 
 Dashboard ini digunakan oleh Admin Keuangan untuk memantau seluruh proses RAB dari tahap pembuatan sampai laporan.
 
-### 2.2 Dashboard Manajer Keuangan
+### 2.2 Dashboard Manajer Operasional
 
-Dashboard Manajer Keuangan berfokus pada proses pemeriksaan dan approval.
+Dashboard Manajer Operasional berfokus pada proses pemeriksaan dan approval.
 
 Informasi yang ditampilkan:
 
@@ -239,8 +240,8 @@ Status digunakan untuk menunjukkan posisi RAB dalam alur kerja sistem.
 | No | Status | Keterangan |
 |---|---|---|
 | 1 | Draft | RAB masih disimpan sementara oleh Admin Keuangan |
-| 2 | Diajukan | RAB telah dikirim ke Manajer Keuangan |
-| 3 | Disetujui Manajer | RAB telah disetujui oleh Manajer Keuangan |
+| 2 | Diajukan | RAB telah dikirim ke Manajer Operasional |
+| 3 | Disetujui Manajer | RAB telah disetujui oleh Manajer Operasional |
 | 4 | Disetujui Direktur | RAB telah disetujui oleh Direktur |
 | 5 | Disetujui | RAB siap diproses pembayaran |
 | 6 | Ditolak | RAB ditolak oleh Manajer atau Direktur |
@@ -505,7 +506,7 @@ Admin menyimpan atau mengajukan RAB
 
 ## 5. Modul Detail RAB
 
-Modul Detail RAB digunakan untuk menampilkan informasi lengkap dari satu pengajuan RAB. Modul ini dapat diakses oleh Admin Keuangan, Manajer Keuangan, dan Direktur sesuai hak akses masing-masing.
+Modul Detail RAB digunakan untuk menampilkan informasi lengkap dari satu pengajuan RAB. Modul ini dapat diakses oleh Admin Keuangan, Manajer Operasional, dan Direktur sesuai hak akses masing-masing.
 
 ### 5.1 Informasi yang Ditampilkan
 
@@ -529,15 +530,16 @@ Detail RAB menampilkan:
 Admin Keuangan dapat:
 
 - melihat isi lengkap RAB;
-- mengedit RAB apabila status masih draft atau ditolak;
+- mengedit RAB apabila status masih draft, ditolak, atau diajukan (sebelum ditinjau oleh atasan);
+- menghapus RAB apabila status masih draft atau diajukan (sebelum ditinjau oleh atasan);
 - mengajukan RAB;
 - melihat catatan penolakan;
-- mengunggah bukti pembayaran apabila RAB telah disetujui;
+- mengunggah bukti pembayaran (maksimal 100KB, format Gambar/PDF) apabila RAB telah disetujui;
 - mencetak atau mengexport data apabila status selesai.
 
-### 5.3 Fungsi Detail RAB untuk Manajer Keuangan
+### 5.3 Fungsi Detail RAB untuk Manajer Operasional
 
-Manajer Keuangan dapat:
+Manajer Operasional dapat:
 
 - melihat detail RAB yang diajukan;
 - memeriksa tabel rincian pengeluaran;
@@ -561,7 +563,7 @@ Direktur dapat:
 
 ## 6. Modul Approval RAB
 
-Modul Approval RAB mengatur proses persetujuan bertingkat dari Manajer Keuangan dan Direktur.
+Modul Approval RAB mengatur proses persetujuan bertingkat dari Manajer Operasional dan Direktur.
 
 ### 6.1 Alur Approval
 
@@ -570,7 +572,7 @@ Admin mengajukan RAB
         ↓
 Status menjadi Diajukan
         ↓
-Manajer Keuangan memeriksa RAB
+Manajer Operasional memeriksa RAB
         ↓
 Jika disetujui, RAB diteruskan ke Direktur
         ↓
@@ -583,9 +585,9 @@ Jika disetujui, RAB siap dibayar
 Jika ditolak, RAB kembali ke Admin untuk revisi
 ```
 
-### 6.2 Approval oleh Manajer Keuangan
+### 6.2 Approval oleh Manajer Operasional
 
-Manajer Keuangan melakukan pemeriksaan terhadap:
+Manajer Operasional melakukan pemeriksaan terhadap:
 
 - kelengkapan data RAB;
 - kesesuaian jenis pengeluaran;
@@ -605,7 +607,7 @@ Jika menolak, Manajer wajib mengisi catatan penolakan agar Admin mengetahui bagi
 
 ### 6.3 Approval oleh Direktur
 
-Direktur melakukan pemeriksaan akhir terhadap RAB yang telah disetujui oleh Manajer Keuangan.
+Direktur melakukan pemeriksaan akhir terhadap RAB yang telah disetujui oleh Manajer Operasional.
 
 Aksi yang dapat dilakukan:
 
@@ -660,7 +662,7 @@ Data pembayaran yang diisi meliputi:
 Ketentuan sistem pada tahap pembayaran:
 
 - hanya RAB berstatus Disetujui yang dapat dibayar;
-- bukti transfer wajib diunggah;
+- bukti transfer wajib diunggah dengan ukuran berkas maksimal **100KB** (format Gambar/PDF);
 - nominal pembayaran wajib diisi;
 - setelah pembayaran disimpan, status berubah menjadi Selesai;
 - RAB yang sudah selesai masuk ke laporan final;
@@ -988,6 +990,6 @@ Penjelasan keterhubungan:
 
 ## Kesimpulan Modul Sistem
 
-Aplikasi Rancangan Anggaran Biaya berbasis website ini memiliki alur kerja yang dimulai dari pembuatan RAB oleh Admin Keuangan, pemilihan jenis pengeluaran, pengisian rincian sesuai struktur tabel, persetujuan oleh Manajer Keuangan, persetujuan akhir oleh Direktur, upload bukti pembayaran, pencatatan arus kas, hingga export laporan.
+Aplikasi Rancangan Anggaran Biaya berbasis website ini memiliki alur kerja yang dimulai dari pembuatan RAB oleh Admin Keuangan, pemilihan jenis pengeluaran, pengisian rincian sesuai struktur tabel, persetujuan oleh Manajer Operasional, persetujuan akhir oleh Direktur, upload bukti pembayaran, pencatatan arus kas, hingga export laporan.
 
 Jenis pengeluaran dalam aplikasi terdiri dari empat jenis, yaitu **Biaya Operasional**, **Petty Cash**, **Biaya Gaji**, dan **Biaya Bulanan**. Setiap jenis pengeluaran memiliki struktur tabel yang berbeda sehingga sistem dapat menyesuaikan kebutuhan input data berdasarkan karakteristik transaksi. Dengan adanya fitur approval bertingkat, arus kas, riwayat aktivitas, dan export laporan, sistem ini tidak hanya berfungsi sebagai aplikasi input RAB, tetapi juga sebagai sistem monitoring dan pengendalian anggaran perusahaan.

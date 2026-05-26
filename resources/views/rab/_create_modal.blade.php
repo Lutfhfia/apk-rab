@@ -17,6 +17,7 @@
         <div class="p-6 flex-1 overflow-y-auto min-h-0">
             <form method="POST" action="{{ route('rab.store') }}" id="rabForm">
                 @csrf
+                <input type="hidden" name="action" id="rabFormAction" value="submit">
 
                 {{-- Data Umum RAB --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -125,10 +126,10 @@
                 {{-- Action Buttons --}}
                 <div class="flex items-center justify-end space-x-3 mt-8">
                     <button type="button" onclick="closeCreateRabModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-xl text-sm font-bold transition">Batal</button>
-                    <button type="submit" name="action" value="draft" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition">Simpan Draft</button>
-                    <button type="submit" name="action" value="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                        Ajukan RAB
+                    <button type="submit" onclick="document.getElementById('rabFormAction').value = 'draft'" class="bg-gray-700 hover:bg-gray-800 text-white px-6 py-3 rounded-xl text-sm font-bold transition submit-btn">Simpan Draft</button>
+                    <button type="submit" onclick="document.getElementById('rabFormAction').value = 'submit'" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold transition flex items-center submit-btn">
+                        <svg class="w-4 h-4 mr-2 icon-submit" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        <span class="text-submit">Ajukan RAB</span>
                     </button>
                 </div>
             </form>

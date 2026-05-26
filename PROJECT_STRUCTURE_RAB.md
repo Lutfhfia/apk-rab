@@ -8,7 +8,7 @@ Aplikasi ini berfokus pada alur kerja:
 1. Admin Keuangan membuat RAB.
 2. Admin memilih jenis pengeluaran.
 3. Sistem menampilkan tabel rincian sesuai jenis pengeluaran.
-4. Manajer Keuangan melakukan approval tahap pertama.
+4. Manajer Operasional melakukan approval tahap pertama.
 5. Direktur melakukan approval akhir.
 6. Admin mengunggah bukti pembayaran.
 7. Sistem mencatat arus kas.
@@ -358,7 +358,7 @@ Mengatur tampilan tabel sesuai empat jenis pengeluaran:
 - Biaya Bulanan
 
 ### 5. Approval Module
-Mengatur approval bertingkat oleh Manajer Keuangan dan Direktur.
+Mengatur approval bertingkat oleh Manajer Operasional dan Direktur.
 
 ### 6. Payment Module
 Mengatur upload bukti pembayaran setelah RAB disetujui.

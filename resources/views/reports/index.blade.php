@@ -485,7 +485,7 @@
                                 <p class="text-[11px] text-gray-600">Palembang,
                                     {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}</p>
                                 <p class="text-[12px] font-black text-gray-900 mt-1">Mengetahui</p>
-                                <p class="text-[10px] font-bold text-gray-500 mt-1">Manajer Keuangan</p>
+                                <p class="text-[10px] font-bold text-gray-500 mt-1">Manajer Operasional</p>
                                 <div class="h-24"></div>
                                 <p
                                     class="text-[12px] font-black text-gray-900 border-b-2 border-gray-900 pb-0.5 inline-block">

@@ -104,7 +104,7 @@ class User extends Authenticatable
 
     public function isManajer(): bool
     {
-        return $this->role === UserRole::MANAJER_KEUANGAN;
+        return $this->role === UserRole::MANAJER_OPERASIONAL;
     }
 
     public function isDirektur(): bool
