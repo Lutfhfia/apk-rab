@@ -155,10 +155,8 @@ class RabController extends Controller
 
     public function create()
     {
-        $expenseTypes = ExpenseType::where('is_active', true)->get();
-        $rabNumber = Rab::generateNumber();
-
-        return view('rab.create', compact('expenseTypes', 'rabNumber'));
+        return redirect()->route('rab.index')
+            ->with('info', 'Fitur pembuatan RAB tersedia melalui tombol "Buat RAB Baru" di halaman ini.');
     }
 
     /**
@@ -167,7 +165,10 @@ class RabController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'rab_number' => 'required|string|unique:rabs,rab_number',
+            'rab_number' => 'nullable|string',
+            'rab_sequence' => 'nullable|integer|min:1',
+            'rab_month' => 'required|string',
+            'rab_year' => 'required|string',
             'request_date' => 'required|date',
             'expense_type_id' => 'required|exists:expense_types,id',
             'period_month' => 'nullable|string',
@@ -186,8 +187,16 @@ class RabController extends Controller
         DB::beginTransaction();
 
         try {
+            $sequence = (int) ($request->rab_sequence ?: Rab::nextSequence());
+            $rabNumber = Rab::buildNumber($sequence, $request->rab_month, $request->rab_year);
+
+            while (Rab::withTrashed()->where('rab_number', $rabNumber)->exists()) {
+                $sequence++;
+                $rabNumber = Rab::buildNumber($sequence, $request->rab_month, $request->rab_year);
+            }
+
             $rab = Rab::create([
-                'rab_number' => $request->rab_number,
+                'rab_number' => $rabNumber,
                 'request_date' => $request->request_date,
                 'period_month' => $request->period_month,
                 'period_year' => $periodYear,
@@ -236,7 +245,7 @@ class RabController extends Controller
                     ->with('submitted_rab_type', $rab->expenseType->name ?? '-');
             }
 
-            return back()
+            return redirect()->route('rab.index', ['status' => RabStatus::DRAFT->value])
                 ->with('success', 'RAB berhasil disimpan sebagai draft!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -284,10 +293,8 @@ class RabController extends Controller
             return back()->with('error', 'RAB ini tidak dapat diedit.');
         }
 
-        $expenseTypes = ExpenseType::where('is_active', true)->get();
-        $expenseItems = $rab->getExpenseItems();
-
-        return view('rab.edit', compact('rab', 'expenseTypes', 'expenseItems'));
+        return redirect()->route('rab.index', ['status' => $rab->status->value])
+            ->with('info', 'Silakan klik tombol Edit pada RAB yang bersangkutan di daftar ini.');
     }
 
     /**
@@ -395,8 +402,8 @@ class RabController extends Controller
             abort(403, 'Hanya Admin Keuangan yang dapat menghapus RAB.');
         }
 
-        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DIAJUKAN])) {
-            return back()->with('error', 'Hanya RAB berstatus Draft atau Diajukan yang dapat dihapus.');
+        if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK])) {
+            return back()->with('error', 'Hanya RAB berstatus Draft atau Ditolak yang dapat dihapus.');
         }
 
         $rab->delete();

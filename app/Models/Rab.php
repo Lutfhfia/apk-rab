@@ -281,20 +281,21 @@ class Rab extends Model
     /**
      * Generate next RAB number.
      */
-    public static function generateNumber(): string
+    public static function generateNumber(?string $month = null, ?string $year = null): string
     {
-        $year = now()->format('Y');
-        $month = now()->format('m');
-        $romanMonths = [
-            '01' => 'I', '02' => 'II', '03' => 'III', '04' => 'IV',
-            '05' => 'V', '06' => 'VI', '07' => 'VII', '08' => 'VIII',
-            '09' => 'IX', '10' => 'X', '11' => 'XI', '12' => 'XII',
-        ];
+        return static::buildNumber(
+            static::nextSequence(),
+            $month ?: now()->format('m'),
+            $year ?: now()->format('Y')
+        );
+    }
 
-        $rabsThisYear = static::whereYear('created_at', $year)->get(['rab_number']);
+    public static function nextSequence(): int
+    {
+        $rabs = static::withTrashed()->get(['rab_number']);
         $maxNumber = 0;
-        
-        foreach ($rabsThisYear as $rab) {
+
+        foreach ($rabs as $rab) {
             $parts = explode('/', $rab->rab_number);
             if (count($parts) > 1 && is_numeric($parts[0])) {
                 $num = (int) $parts[0];
@@ -304,8 +305,54 @@ class Rab extends Model
             }
         }
 
-        $nextNumber = $maxNumber + 1;
+        return $maxNumber + 1;
+    }
 
-        return str_pad($nextNumber, 3, '0', STR_PAD_LEFT) . '/RAB/SBK/' . $romanMonths[$month] . '/' . $year;
+    public static function buildNumber(int $sequence, ?string $month = null, ?string $year = null): string
+    {
+        return str_pad($sequence, 3, '0', STR_PAD_LEFT)
+            . '/RAB/SBK/'
+            . static::normalizeMonthToRoman($month ?: now()->format('m'))
+            . '/'
+            . static::normalizeYear($year ?: now()->format('Y'));
+    }
+
+    public static function parseNumberParts(?string $rabNumber): array
+    {
+        $parts = explode('/', (string) $rabNumber);
+
+        return [
+            'sequence' => isset($parts[0]) && is_numeric($parts[0]) ? (int) $parts[0] : static::nextSequence(),
+            'month' => $parts[3] ?? static::normalizeMonthToRoman(now()->format('m')),
+            'year' => $parts[4] ?? now()->format('Y'),
+        ];
+    }
+
+    public static function normalizeMonthToRoman(string|int|null $month): string
+    {
+        $month = strtoupper(trim((string) $month));
+        $romanMonths = [
+            '1' => 'I', '01' => 'I', 'JANUARI' => 'I', 'JANUARY' => 'I', 'I' => 'I',
+            '2' => 'II', '02' => 'II', 'FEBRUARI' => 'II', 'FEBRUARY' => 'II', 'II' => 'II',
+            '3' => 'III', '03' => 'III', 'MARET' => 'III', 'MARCH' => 'III', 'III' => 'III',
+            '4' => 'IV', '04' => 'IV', 'APRIL' => 'IV', 'IV' => 'IV',
+            '5' => 'V', '05' => 'V', 'MEI' => 'V', 'MAY' => 'V', 'V' => 'V',
+            '6' => 'VI', '06' => 'VI', 'JUNI' => 'VI', 'JUNE' => 'VI', 'VI' => 'VI',
+            '7' => 'VII', '07' => 'VII', 'JULI' => 'VII', 'JULY' => 'VII', 'VII' => 'VII',
+            '8' => 'VIII', '08' => 'VIII', 'AGUSTUS' => 'VIII', 'AUGUST' => 'VIII', 'VIII' => 'VIII',
+            '9' => 'IX', '09' => 'IX', 'SEPTEMBER' => 'IX', 'IX' => 'IX',
+            '10' => 'X', 'OKTOBER' => 'X', 'OCTOBER' => 'X', 'X' => 'X',
+            '11' => 'XI', 'NOVEMBER' => 'XI', 'XI' => 'XI',
+            '12' => 'XII', 'DESEMBER' => 'XII', 'DECEMBER' => 'XII', 'XII' => 'XII',
+        ];
+
+        return $romanMonths[$month] ?? static::normalizeMonthToRoman(now()->format('m'));
+    }
+
+    public static function normalizeYear(string|int|null $year): string
+    {
+        $year = preg_replace('/[^0-9]/', '', (string) $year);
+
+        return strlen($year) === 4 ? $year : now()->format('Y');
     }
 }

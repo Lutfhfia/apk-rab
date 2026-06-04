@@ -100,8 +100,47 @@ function parseMoney(val) {
     return parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0;
 }
 
+function normalizeRabMonth(value) {
+    const key = String(value || '').trim().toUpperCase();
+    const months = {
+        '1': 'I', '01': 'I', 'JANUARI': 'I', 'JANUARY': 'I', 'I': 'I',
+        '2': 'II', '02': 'II', 'FEBRUARI': 'II', 'FEBRUARY': 'II', 'II': 'II',
+        '3': 'III', '03': 'III', 'MARET': 'III', 'MARCH': 'III', 'III': 'III',
+        '4': 'IV', '04': 'IV', 'APRIL': 'IV', 'IV': 'IV',
+        '5': 'V', '05': 'V', 'MEI': 'V', 'MAY': 'V', 'V': 'V',
+        '6': 'VI', '06': 'VI', 'JUNI': 'VI', 'JUNE': 'VI', 'VI': 'VI',
+        '7': 'VII', '07': 'VII', 'JULI': 'VII', 'JULY': 'VII', 'VII': 'VII',
+        '8': 'VIII', '08': 'VIII', 'AGUSTUS': 'VIII', 'AUGUST': 'VIII', 'VIII': 'VIII',
+        '9': 'IX', '09': 'IX', 'SEPTEMBER': 'IX', 'IX': 'IX',
+        '10': 'X', 'OKTOBER': 'X', 'OCTOBER': 'X', 'X': 'X',
+        '11': 'XI', 'NOVEMBER': 'XI', 'XI': 'XI',
+        '12': 'XII', 'DESEMBER': 'XII', 'DECEMBER': 'XII', 'XII': 'XII',
+    };
+
+    return months[key] || '{{ \App\Models\Rab::normalizeMonthToRoman(now()->format('m')) }}';
+}
+
+function updateRabNumberPreview() {
+    const seq = document.getElementById('rabSequenceInput')?.value || '1';
+    const month = normalizeRabMonth(document.getElementById('rabMonthInput')?.value);
+    const rawYear = document.getElementById('rabYearInput')?.value || new Date().getFullYear();
+    const year = String(rawYear).replace(/[^0-9]/g, '').slice(0, 4) || new Date().getFullYear();
+    const number = String(seq).padStart(3, '0') + '/RAB/SBK/' + month + '/' + year;
+
+    const hidden = document.getElementById('rabNumberInput');
+    const preview = document.getElementById('rabNumberPreview');
+    if (hidden) hidden.value = number;
+    if (preview) preview.value = number;
+}
+
+document.getElementById('rabMonthInput')?.addEventListener('input', updateRabNumberPreview);
+document.getElementById('rabYearInput')?.addEventListener('input', updateRabNumberPreview);
+updateRabNumberPreview();
+
 // Before form submit: convert formatted money back to raw numbers & prevent double submit
 document.getElementById('rabForm')?.addEventListener('submit', function(e) {
+    updateRabNumberPreview();
+
     // 1. Convert money inputs back to numbers
     this.querySelectorAll('.money-input').forEach(input => {
         input.value = parseMoney(input.value);

@@ -145,14 +145,14 @@
                 </div>
                 @php
                     $rabNotifications = Auth::user()
-                        ? Auth::user()->rabNotifications()->with('rab')->latest()->limit(8)->get()
+                        ? Auth::user()->rabNotifications()->with('rab')->latest()->get()
                         : collect();
                     $unreadRabNotifications = Auth::user()
                         ? Auth::user()->rabNotifications()->unread()->count()
                         : 0;
                 @endphp
-                <div class="relative group">
-                    <button type="button" class="relative h-10 w-10 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-emerald-600 transition flex items-center justify-center">
+                <div class="relative">
+                    <button type="button" onclick="openRabNotificationModal()" class="relative h-10 w-10 rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-emerald-600 transition flex items-center justify-center" title="Notifikasi RAB">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9"/>
                         </svg>
@@ -162,33 +162,6 @@
                         </span>
                         @endif
                     </button>
-                    {{-- Wrapper luar menggunakan pt-2 (padding-top) sebagai jembatan hover transparan --}}
-<div class="absolute right-0 top-full pt-2 w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 origin-top-right">
-
-    {{-- Kotak putih (visual) dipindahkan ke dalam wrapper --}}
-    <div class="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
-        <div class="px-4 py-3 border-b border-gray-100">
-            <p class="text-sm font-extrabold text-gray-800">Notifikasi RAB</p>
-            <p class="text-xs text-gray-500">{{ $unreadRabNotifications }} belum dibaca</p>
-        </div>
-        <div class="max-h-96 overflow-y-auto">
-            @forelse($rabNotifications as $notification)
-            <a href="{{ route('rab.notifications.open', $notification) }}" class="block px-4 py-3 border-b border-gray-50 hover:bg-emerald-50 transition {{ $notification->read_at ? 'bg-white' : 'bg-emerald-50/60' }}">
-                <div class="flex gap-3">
-                    <span class="mt-1 h-2 w-2 rounded-full flex-shrink-0 {{ $notification->read_at ? 'bg-gray-300' : 'bg-emerald-500' }}"></span>
-                    <div class="min-w-0">
-                        <p class="text-sm font-bold text-gray-800 truncate">{{ $notification->title }}</p>
-                        <p class="text-xs text-gray-600 mt-1 leading-relaxed">{{ $notification->message }}</p>
-                        <p class="text-[11px] text-gray-400 mt-2">{{ $notification->created_at->diffForHumans() }}</p>
-                    </div>
-                </div>
-            </a>
-            @empty
-            <div class="px-4 py-8 text-center text-sm text-gray-400">Belum ada notifikasi.</div>
-            @endforelse
-        </div>
-    </div>
-</div>
                 </div>
                 <div class="relative group">
                     <button type="button" class="flex items-center space-x-3 hover:bg-gray-50 px-3 py-2 rounded-xl transition focus:outline-none">
@@ -225,6 +198,47 @@
                 </div>
             </div>
         </header>
+
+        {{-- Modal Semua Notifikasi RAB --}}
+        <div id="rabNotificationModal" class="fixed inset-0 bg-black/50 z-[120] hidden items-center justify-center p-4">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-extrabold text-gray-800">Notifikasi RAB</h3>
+                        <p class="text-sm text-gray-500">{{ $unreadRabNotifications }} belum dibaca dari {{ $rabNotifications->count() }} notifikasi</p>
+                    </div>
+                    <button type="button" onclick="closeRabNotificationModal()" class="h-9 w-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition" aria-label="Tutup">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+                <div class="overflow-y-auto p-4 space-y-3">
+                    @forelse($rabNotifications as $notification)
+                    <a href="{{ route('rab.notifications.open', $notification) }}" class="block rounded-xl border transition {{ $notification->read_at ? 'border-gray-100 bg-white hover:bg-gray-50' : 'border-emerald-100 bg-emerald-50/70 hover:bg-emerald-50' }} p-4">
+                        <div class="flex gap-4">
+                            <span class="mt-1 h-3 w-3 rounded-full flex-shrink-0 {{ $notification->read_at ? 'bg-gray-300' : 'bg-emerald-500' }}"></span>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                                    <p class="text-sm font-extrabold text-gray-800">{{ $notification->title }}</p>
+                                    <p class="text-[11px] text-gray-400 font-semibold">{{ $notification->created_at->diffForHumans() }}</p>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-1 leading-relaxed">{{ $notification->message }}</p>
+                                @if($notification->rab)
+                                <p class="text-xs text-gray-400 mt-2 font-semibold">No. RAB: {{ $notification->rab->rab_number }}</p>
+                                @endif
+                            </div>
+                        </div>
+                    </a>
+                    @empty
+                    <div class="py-12 text-center">
+                        <div class="w-14 h-14 rounded-full bg-gray-100 text-gray-400 mx-auto mb-4 flex items-center justify-center">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9"/></svg>
+                        </div>
+                        <p class="text-sm font-bold text-gray-500">Belum ada notifikasi.</p>
+                    </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
 
         {{-- Flash Messages --}}
         @if(session('success') && !session('submitted_rab_id'))
@@ -297,6 +311,22 @@
             }
         }
 
+        function openRabNotificationModal() {
+            const modal = document.getElementById('rabNotificationModal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeRabNotificationModal() {
+            const modal = document.getElementById('rabNotificationModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Auto-attach to all elements with .avatar-clickable
             document.querySelectorAll('.avatar-clickable').forEach(el => {
@@ -314,6 +344,7 @@
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
                     document.getElementById('imageLightbox').style.display = 'none';
+                    closeRabNotificationModal();
                 }
             });
 

@@ -9,7 +9,7 @@
             Profil Saya
         </h3>
 
-        @if($errors->any())
+        @if($errors->any() && old('form_context') === 'profile')
         <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
             <ul class="text-sm text-red-600 list-disc list-inside">
                 @foreach($errors->all() as $err)
@@ -21,6 +21,7 @@
 
         <form method="POST" action="{{ route('profile.update') }}" id="profileForm" enctype="multipart/form-data">
             @csrf
+            <input type="hidden" name="form_context" value="profile">
             
             <div class="flex flex-col items-center mb-6">
                 <div class="w-[100px] h-[100px] rounded-full overflow-hidden border-3 border-emerald-500 mb-3 relative group" id="avatarContainer">
@@ -160,7 +161,7 @@
         }
 
         // Auto-open modal if there are validation errors
-        @if($errors->any())
+        @if($errors->any() && old('form_context') === 'profile')
         document.getElementById('profileModal').style.display = 'flex';
         @endif
     });

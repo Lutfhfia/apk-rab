@@ -1,5 +1,9 @@
 {{-- Modal Buat RAB --}}
-<div id="createRabModal" class="fixed inset-0 bg-black/50 z-[60] {{ $errors->any() && old('rab_number') ? 'flex' : 'hidden' }} items-center justify-center p-4">
+@php
+    $showCreateRabErrors = $errors->any() && old('form_context') === 'rab_create';
+    $rabNumberParts = \App\Models\Rab::parseNumberParts($rabNumber ?? null);
+@endphp
+<div id="createRabModal" class="fixed inset-0 bg-black/50 z-[60] {{ $showCreateRabErrors ? 'flex' : 'hidden' }} items-center justify-center p-4">
     <div class="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-[95vw] max-h-[95vh] flex flex-col overflow-hidden animate-fade-in">
 
         {{-- Header Modal --}}
@@ -17,7 +21,9 @@
         <div class="p-6 flex-1 overflow-y-auto min-h-0">
             <form method="POST" action="{{ route('rab.store') }}" id="rabForm">
                 @csrf
+                <input type="hidden" name="form_context" value="rab_create">
                 <input type="hidden" name="action" id="rabFormAction" value="submit">
+                <input type="hidden" name="rab_number" id="rabNumberInput" value="{{ old('rab_number', $rabNumber ?? '') }}">
 
                 {{-- Data Umum RAB --}}
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -26,7 +32,7 @@
                         Data Umum RAB
                     </h3>
 
-                    @if($errors->any() && old('rab_number'))
+                    @if($showCreateRabErrors)
                     <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
                         <ul class="text-sm text-red-600 list-disc list-inside">
                             @foreach($errors->all() as $err)
@@ -38,8 +44,20 @@
 
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                         <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1.5">No. Urut</label>
+                            <input type="number" name="rab_sequence" id="rabSequenceInput" value="{{ old('rab_sequence', $rabNumberParts['sequence']) }}" readonly class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-50 text-gray-600 focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1.5">Bulan Surat *</label>
+                            <input type="text" name="rab_month" id="rabMonthInput" value="{{ old('rab_month', $rabNumberParts['month']) }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" placeholder="V">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1.5">Tahun Surat *</label>
+                            <input type="text" name="rab_year" id="rabYearInput" value="{{ old('rab_year', $rabNumberParts['year']) }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" placeholder="2026">
+                        </div>
+                        <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1.5">Nomor RAB</label>
-                            <input type="text" name="rab_number" value="{{ old('rab_number', $rabNumber ?? '') }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                            <input type="text" id="rabNumberPreview" value="{{ old('rab_number', $rabNumber ?? '') }}" readonly class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-gray-50 text-gray-600 focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-gray-500 mb-1.5">Pembuat</label>

@@ -30,7 +30,7 @@ class UserSeeder extends Seeder
                 'password' => 'password',
                 'role' => 'direktur',
                 'is_active' => true,
-            ],
+            ], //php artisan db:seed //php artisan db:seed --class=NamaSeeder
         ];
 
         foreach ($users as $userData) {
@@ -41,3 +41,10 @@ class UserSeeder extends Seeder
         }
     }
 }
+//php artisan tinker
+
+// $user = App\Models\User::where('email', 'luthfiandini1909@gmail.com')->first();
+// $user->password = Hash::make('passwordbaru');
+// $user->save();
+
+// exit
