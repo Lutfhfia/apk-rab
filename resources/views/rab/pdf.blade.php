@@ -234,9 +234,11 @@
                     @if($rab->expenseType->code === 'petty_cash')
                     <th>Nama Pengeluaran</th><th>Keterangan</th><th style="width:6%;">Jml</th><th style="width:6%;">Satuan</th><th class="text-right" style="width:11%;">Harga Satuan (Rp)</th><th class="text-right" style="width:10%;">Admin (Rp)</th><th class="text-right" style="width:11%;">Total (Rp)</th><th style="width:9%;">Tanggal</th>
                     @elseif($rab->expenseType->code === 'gaji')
-                    <th>Nama</th><th>Jabatan</th><th>No. Rek</th><th style="width:5%;">Hadir</th><th class="text-right" style="width:10%;">Gaji Pokok (Rp)</th><th class="text-right" style="width:9%;">Makan/Hari (Rp)</th><th class="text-right" style="width:9%;">Transport/Hari (Rp)</th><th class="text-right" style="width:9%;">Lembur (Rp)</th><th class="text-right" style="width:10%;">Total Gaji (Rp)</th><th>Catatan</th>
-                    @elseif($rab->expenseType->code === 'bulanan')
+                    <th>Nama</th><th>Jabatan</th><th>No. Rek</th><th style="width:5%;">Hadir</th><th class="text-right" style="width:9%;">Gaji Pokok (Rp)</th><th class="text-right" style="width:8%;">Makan/Hari (Rp)</th><th class="text-right" style="width:8%;">Transport/Hari (Rp)</th><th class="text-right" style="width:8%;">Lembur (Rp)</th><th class="text-right" style="width:8%;">Potongan (Rp)</th><th class="text-right" style="width:10%;">Total Gaji (Rp)</th><th>Catatan</th>
+                    @elseif(in_array($rab->expenseType->code, ['bulanan', 'listrik', 'air_pam'], true))
                     <th>Keterangan</th><th>No.Regist/ID</th><th>A/N</th><th class="text-right" style="width:12%;">Total Pengeluaran (Rp)</th><th class="text-right" style="width:10%;">Biaya Admin (Rp)</th><th class="text-right" style="width:12%;">Subtotal (Rp)</th><th style="width:9%;">Tanggal</th>
+                    @elseif($rab->expenseType->code === 'pnbp')
+                    <th>Nama & No. Agenda</th><th style="width:15%;">Jenis Level</th><th class="text-right" style="width:20%;">Tarif PNBP (Rp)</th><th>Nama Perusahaan</th>
                     @endif
                 </tr>
             </thead>
@@ -262,9 +264,10 @@
                     <td class="text-right">{{ number_format($item->meal_allowance_daily, 0, ',', '.') }}</td>
                     <td class="text-right">{{ number_format($item->transport_daily, 0, ',', '.') }}</td>
                     <td class="text-right">{{ number_format($item->overtime, 0, ',', '.') }}</td>
+                    <td class="text-right">{{ number_format($item->deduction ?? 0, 0, ',', '.') }}</td>
                     <td class="text-right font-bold">{{ number_format($item->total_salary > 0 ? $item->total_salary : $item->salary_nominal, 0, ',', '.') }}</td>
                     <td>{{ $item->notes ?? '-' }}</td>
-                    @elseif($rab->expenseType->code === 'bulanan')
+                    @elseif(in_array($rab->expenseType->code, ['bulanan', 'listrik', 'air_pam'], true))
                     <td>{{ $item->payment_name }}</td>
                     <td>{{ $item->registration_number ?? '-' }}</td>
                     <td>{{ $item->account_name ?? '-' }}</td>
@@ -272,6 +275,14 @@
                     <td class="text-right">{{ number_format($item->admin_fee, 0, ',', '.') }}</td>
                     <td class="text-right font-bold">{{ number_format($item->total_payment > 0 ? $item->total_payment : $item->total_expense, 0, ',', '.') }}</td>
                     <td>{{ $item->transaction_date ? $item->transaction_date->format('d/m/Y') : '-' }}</td>
+                    @elseif($rab->expenseType->code === 'pnbp')
+                    <td>
+                        <div class="font-bold">{{ $item->item_name }}</div>
+                        <div style="font-size: 8px; color: #666;">No. Agenda: {{ $item->agenda_number }}</div>
+                    </td>
+                    <td>Level {{ $item->level }}</td>
+                    <td class="text-right font-bold">Rp {{ number_format($item->tarif_pnbp, 0, ',', '.') }}</td>
+                    <td>{{ $item->company_name }}</td>
                     @endif
                 </tr>
                 @endforeach
@@ -285,14 +296,20 @@
                 </tr>
                 @elseif($rab->expenseType->code === 'gaji')
                 <tr class="total-row">
-                    <td colspan="9" class="text-right" style="padding: 7px 5px;">TOTAL</td>
+                    <td colspan="10" class="text-right" style="padding: 7px 5px;">TOTAL</td>
                     <td class="text-right" style="padding: 7px 5px;">{{ number_format($rab->total_amount, 0, ',', '.') }}</td>
                     <td></td>
                 </tr>
-                @elseif($rab->expenseType->code === 'bulanan')
+                @elseif(in_array($rab->expenseType->code, ['bulanan', 'listrik', 'air_pam'], true))
                 <tr class="total-row">
                     <td colspan="6" class="text-right" style="padding: 7px 5px;">TOTAL</td>
                     <td class="text-right" style="padding: 7px 5px;">{{ number_format($rab->total_amount, 0, ',', '.') }}</td>
+                    <td></td>
+                </tr>
+                @elseif($rab->expenseType->code === 'pnbp')
+                <tr class="total-row">
+                    <td colspan="3" class="text-right" style="padding: 7px 5px;">TOTAL</td>
+                    <td class="text-right" style="padding: 7px 5px;">Rp {{ number_format($rab->total_amount, 0, ',', '.') }}</td>
                     <td></td>
                 </tr>
                 @endif

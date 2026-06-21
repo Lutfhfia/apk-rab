@@ -10,7 +10,7 @@ use Illuminate\Validation\Rule;
 class ProfileController extends Controller
 {
     /**
-     * Update profile and avatar.
+     * Memperbarui profil pengguna beserta foto profil (avatar).
      */
     public function update(Request $request)
     {
@@ -20,16 +20,16 @@ class ProfileController extends Controller
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone_number' => 'nullable|string|max:20',
-            'avatar_data' => 'nullable|string', // Base64 image data from cropper
+            'avatar_data' => 'nullable|string', // Data gambar Base64 dari hasil cropping/pemotongan gambar
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
         $user->phone_number = $request->phone_number;
 
-        // Process avatar data if provided
+        // Proses data foto profil jika disediakan
         if ($request->filled('avatar_data')) {
-            // avatar_data format: data:image/png;base64,iVBORw0KGgo...
+            // format avatar_data: data:image/png;base64,iVBORw0KGgo...
             $imgData = $request->avatar_data;
             if (preg_match('/^data:image\/(\w+);base64,/', $imgData, $type)) {
                 $imgData = substr($imgData, strpos($imgData, ',') + 1);
@@ -41,12 +41,12 @@ class ProfileController extends Controller
                     if ($imgData !== false) {
                         $fileName = 'avatars/' . $user->id . '_' . time() . '.' . $type;
                         
-                        // Delete old avatar if exists
+                        // Hapus avatar lama jika ada
                         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
                             Storage::disk('public')->delete($user->avatar);
                         }
 
-                        // Save new avatar
+                        // Simpan avatar baru
                         Storage::disk('public')->put($fileName, $imgData);
                         $user->avatar = $fileName;
                     }

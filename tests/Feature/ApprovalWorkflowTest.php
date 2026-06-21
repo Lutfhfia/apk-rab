@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Enums\RabStatus;
 use App\Enums\ApprovalStatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class ApprovalWorkflowTest extends TestCase
@@ -31,7 +32,7 @@ class ApprovalWorkflowTest extends TestCase
         ]);
 
         $this->manajer = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
 
@@ -46,6 +47,14 @@ class ApprovalWorkflowTest extends TestCase
             'description' => 'Pengeluaran kecil',
             'is_active' => true,
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('FONNTE_TOKEN');
+        unset($_ENV['FONNTE_TOKEN'], $_SERVER['FONNTE_TOKEN']);
+
+        parent::tearDown();
     }
 
     private function createRab(RabStatus $status, string $rabNumber = '001/RAB/SBK/VI/2026'): Rab
@@ -64,6 +73,75 @@ class ApprovalWorkflowTest extends TestCase
     }
 
     // ── Manager Approval ──
+
+    private function fakeFonnteToken(): void
+    {
+        config(['logging.default' => 'null']);
+        putenv('FONNTE_TOKEN=test-token');
+        $_ENV['FONNTE_TOKEN'] = 'test-token';
+        $_SERVER['FONNTE_TOKEN'] = 'test-token';
+    }
+
+    public function test_admin_submit_sends_personalized_whatsapp_to_manajer(): void
+    {
+        $this->fakeFonnteToken();
+        Http::fake([
+            'https://api.fonnte.com/send' => Http::response(['status' => true], 200),
+        ]);
+
+        $this->admin->update(['name' => 'Mba Mery']);
+        $this->manajer->update([
+            'name' => 'Pak Alpian',
+            'phone_number' => '08123456789',
+        ]);
+
+        $rab = $this->createRab(RabStatus::DRAFT);
+
+        $this->actingAs($this->admin)->post("/rab/{$rab->id}/submit");
+
+        Http::assertSent(function ($request) use ($rab) {
+            $message = $request['message'];
+
+            return $request->url() === 'https://api.fonnte.com/send'
+                && $request['target'] === '628123456789'
+                && str_contains($message, 'Yth. Pak Alpian')
+                && str_contains($message, 'Pengajuan Pembayaran Petty Cash - Juni 2026')
+                && str_contains($message, route('manajer.rab.show', $rab))
+                && str_contains($message, "Hormat saya,\n\nMba Mery");
+        });
+    }
+
+    public function test_manager_approval_sends_detailed_personalized_whatsapp_to_direktur(): void
+    {
+        $this->fakeFonnteToken();
+        Http::fake([
+            'https://api.fonnte.com/send' => Http::response(['status' => true], 200),
+        ]);
+
+        $this->admin->update(['name' => 'Mba Mery']);
+        $this->direktur->update([
+            'name' => 'Pak Direktur',
+            'phone_number' => '08111111111',
+        ]);
+
+        $rab = $this->createRab(RabStatus::DIAJUKAN);
+
+        $this->actingAs($this->manajer)->post("/rab/{$rab->id}/approve-manager", [
+            'notes' => 'Disetujui untuk proses lebih lanjut.',
+        ]);
+
+        Http::assertSent(function ($request) use ($rab) {
+            $message = $request['message'];
+
+            return $request->url() === 'https://api.fonnte.com/send'
+                && $request['target'] === '628111111111'
+                && str_contains($message, 'Yth. Pak Direktur')
+                && str_contains($message, 'Pengajuan Pembayaran Petty Cash - Juni 2026')
+                && str_contains($message, 'Mohon pemeriksaan dan persetujuan Bapak')
+                && str_contains($message, route('direktur.rab.show', $rab))
+                && str_contains($message, "Hormat saya,\n\nMba Mery");
+        });
+    }
 
     public function test_manajer_can_approve_submitted_rab(): void
     {
@@ -84,7 +162,7 @@ class ApprovalWorkflowTest extends TestCase
         $this->assertDatabaseHas('rab_approvals', [
             'rab_id' => $rab->id,
             'user_id' => $this->manajer->id,
-            'role' => 'manajer_operasional',
+            'role' => 'manajer_keuangan',
             'status' => ApprovalStatus::APPROVED->value,
         ]);
 

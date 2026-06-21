@@ -262,7 +262,7 @@ const configs = {
         }
     },
     gaji: {
-        headers: ['No','Nama','Jabatan','No. Rek','Hadir (hari)','Gaji Pokok','Uang Makan/Hari','Transport/Hari','Lembur','Total Gaji','Catatan','Aksi'],
+        headers: ['No','Nama','Jabatan','No. Rek','Hadir (hari)','Gaji Pokok','Uang Makan/Hari','Transport/Hari','Lembur','Potongan','Total Gaji','Catatan','Aksi'],
         row: (i, d={}) => {
             const posOpts = ['Direktur','Manajer','Admin','OB','Lainnya'].map(p => `<option value="${p}" ${d.position===p?'selected':''}>${p}</option>`).join('');
             return `
@@ -275,6 +275,7 @@ const configs = {
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][meal_allowance_daily]" value="${fmtNum(d.meal_allowance_daily)}" class="w-28 ${nc} calc-trigger money-input" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][transport_daily]" value="${fmtNum(d.transport_daily||20000)}" class="w-28 ${nc} calc-trigger money-input" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][overtime]" value="${fmtNum(d.overtime)}" class="w-28 ${nc} calc-trigger money-input" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][deduction]" value="${fmtNum(d.deduction)}" class="w-28 ${nc} calc-trigger money-input text-red-500" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3 font-bold text-gray-800 row-total">Rp ${fmtNum(d.total_salary)}</td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][notes]" value="${d.notes||''}" class="${ic}"></td>
             <td class="py-3 px-3">${delBtn}</td>`;
@@ -285,7 +286,8 @@ const configs = {
             const meal = parseMoney(row.querySelector('[name*="meal_allowance_daily"]')?.value);
             const transport = parseMoney(row.querySelector('[name*="transport_daily"]')?.value);
             const overtime = parseMoney(row.querySelector('[name*="overtime"]')?.value);
-            return base + (days * meal) + (days * transport) + overtime;
+            const deduction = parseMoney(row.querySelector('[name*="deduction"]')?.value);
+            return base + (days * meal) + (days * transport) + overtime - deduction;
         }
     },
     bulanan: {
@@ -308,7 +310,48 @@ const configs = {
             const admin = parseMoney(row.querySelector('[name*="admin_fee"]')?.value);
             return expense + admin;
         }
+    },
+    pnbp: {
+        headers: ['No','Nama & No. Agenda','Jenis Level','Tarif PNBP','Nama Perusahaan','Aksi'],
+        row: (i, d={}) => {
+            const levelOpts = [1,2,3,4].map(l => `<option value="${l}" ${d.level==l?'selected':''}>Level ${l}</option>`).join('');
+            return `
+            <td class="py-3 px-3 text-center text-sm text-gray-500">${i}</td>
+            <td class="py-3 px-3">
+                <div class="flex flex-col space-y-1">
+                    <input type="text" name="items[${i-1}][item_name]" value="${d.item_name||''}" required class="${ic}" placeholder="Nama">
+                    <input type="text" name="items[${i-1}][agenda_number]" value="${d.agenda_number||''}" required class="${ic} agenda-number-input-{{ $rab->id }}" placeholder="No. Agenda" list="agendaSuggestions-{{ $rab->id }}" oninput="window['updateAgendaSuggestions_{{ $rab->id }}']()">
+                </div>
+            </td>
+            <td class="py-3 px-3">
+                <select name="items[${i-1}][level]" required class="${sc} level-select" onchange="window['updatePnbpTarif_{{ $rab->id }}'](this)">
+                    <option value="">-- Pilih Level --</option>
+                    ${levelOpts}
+                </select>
+            </td>
+            <td class="py-3 px-3">
+                <input type="text" name="items[${i-1}][tarif_pnbp]" value="${fmtNum(d.tarif_pnbp)}" readonly class="${nc} money-input pnbp-tarif-input" placeholder="0">
+            </td>
+            <td class="py-3 px-3">
+                <input type="text" name="items[${i-1}][company_name]" value="${d.company_name||''}" required class="${ic}" placeholder="Nama Perusahaan">
+            </td>
+            <td class="py-3 px-3">${delBtn}</td>`;
+        },
+        calcRow: (row) => {
+            return parseMoney(row.querySelector('[name*="tarif_pnbp"]')?.value);
+        }
     }
+};
+
+configs.listrik = {
+    headers: configs.bulanan.headers,
+    row: configs.bulanan.row,
+    calcRow: configs.bulanan.calcRow
+};
+configs.air_pam = {
+    headers: configs.bulanan.headers,
+    row: configs.bulanan.row,
+    calcRow: configs.bulanan.calcRow
 };
 
 function formatMoney(el) {
@@ -323,6 +366,22 @@ function parseMoney(val) {
     if (!val) return 0;
     return parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0;
 }
+function updatePnbpTarif(select) {
+    const row = select.closest('tr');
+    const level = select.value;
+    const tarifInput = row.querySelector('.pnbp-tarif-input');
+    if (tarifInput) {
+        if (level === '1' || level === '2' || level === '3') {
+            tarifInput.value = '300.000';
+        } else if (level === '4') {
+            tarifInput.value = '525.000';
+        } else {
+            tarifInput.value = '';
+        }
+        calculateRow(row);
+    }
+}
+window['updatePnbpTarif_{{ $rab->id }}'] = updatePnbpTarif;
 document.getElementById('rabForm-{{ $rab->id }}').addEventListener('submit', function(e) {
     // 1. Convert money inputs back to numbers
     this.querySelectorAll('.money-input').forEach(input => {
@@ -372,9 +431,11 @@ function initTable() {
         if (currentType === 'petty_cash') {
             table.classList.add('min-w-[1000px]');
         } else if (currentType === 'gaji') {
-            table.classList.add('min-w-[1200px]');
-        } else if (currentType === 'bulanan') {
+            table.classList.add('min-w-[1300px]');
+        } else if (currentType === 'bulanan' || currentType === 'listrik' || currentType === 'air_pam') {
             table.classList.add('min-w-[900px]');
+        } else if (currentType === 'pnbp') {
+            table.classList.add('min-w-[1000px]');
         }
     }
 
@@ -398,6 +459,13 @@ function addRow(data = {}) {
     tr.querySelectorAll('.calc-trigger').forEach(input => {
         input.addEventListener('input', () => calculateRow(tr));
     });
+
+    // Auto-scroll to the newly added row
+    setTimeout(() => {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const firstInput = tr.querySelector('input[type="text"], select');
+        if (firstInput) firstInput.focus();
+    }, 100);
 }
 window['addRow_{{ $rab->id }}'] = addRow;
 
@@ -551,6 +619,13 @@ function addOperationalRow(gIdx, data = {}) {
         input.addEventListener('input', () => calcOperationalGroup(gIdx));
     });
 
+    // Auto-scroll to the newly added row
+    setTimeout(() => {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const firstInput = tr.querySelector('input[type="text"]');
+        if (firstInput) firstInput.focus();
+    }, 100);
+
     if (data.id) calcOperationalGroup(gIdx);
 }
 window['addOperationalRow_{{ $rab->id }}'] = addOperationalRow;
@@ -608,8 +683,31 @@ function calcOperationalGrandTotal() {
     document.getElementById('operationalGrandTotal-{{ $rab->id }}').textContent = 'Rp ' + grand.toLocaleString('id-ID');
 }
 
+// ── Agenda number suggestions for PNBP ──
+if (!document.getElementById('agendaSuggestions-{{ $rab->id }}')) {
+    const datalist = document.createElement('datalist');
+    datalist.id = 'agendaSuggestions-{{ $rab->id }}';
+    document.body.appendChild(datalist);
+}
+
+function updateAgendaSuggestions() {
+    const datalist = document.getElementById('agendaSuggestions-{{ $rab->id }}');
+    if (!datalist) return;
+    const inputs = document.querySelectorAll('.agenda-number-input-{{ $rab->id }}');
+    const values = new Set();
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) values.add(val);
+    });
+    datalist.innerHTML = Array.from(values).map(v => `<option value="${v}">`).join('');
+}
+window['updateAgendaSuggestions_{{ $rab->id }}'] = updateAgendaSuggestions;
+
 // Automatically init the table when the script runs (which is when the modal is included)
 initTable();
+
+// Update suggestions after init for existing data
+if (currentType === 'pnbp') updateAgendaSuggestions();
 
 })();
 </script>

@@ -30,7 +30,7 @@ class UserManagementTest extends TestCase
         ]);
 
         $this->manajer = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
     }

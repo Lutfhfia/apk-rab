@@ -31,6 +31,9 @@ class MonthlyExpenseItem extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB pemilik item pengeluaran bulanan ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);

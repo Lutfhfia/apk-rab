@@ -7,6 +7,9 @@ use Illuminate\Database\Seeder;
 
 class ExpenseTypeSeeder extends Seeder
 {
+    /**
+     * Membuat data awal untuk tipe pengeluaran.
+     */
     public function run(): void
     {
         $types = [
@@ -30,6 +33,21 @@ class ExpenseTypeSeeder extends Seeder
                 'name' => 'Biaya Bulanan',
                 'description' => 'Pembayaran rutin perusahaan yang dilakukan setiap bulan seperti listrik, internet, sewa, dll.',
             ],
+            [
+                'code' => 'listrik',
+                'name' => 'Biaya Listrik',
+                'description' => 'Pengeluaran untuk pembayaran tagihan listrik bulanan.',
+            ],
+            [
+                'code' => 'air_pam',
+                'name' => 'Biaya Air PAM',
+                'description' => 'Pengeluaran untuk pembayaran tagihan air PAM bulanan.',
+            ],
+            [
+                'code' => 'pnbp',
+                'name' => 'Pembayaran PNBP',
+                'description' => 'Pembayaran Penerimaan Negara Bukan Pajak (PNBP) berdasarkan level.',
+            ],
         ];
 
         foreach ($types as $type) {
@@ -40,3 +58,7 @@ class ExpenseTypeSeeder extends Seeder
         }
     }
 }
+//php artisan tinker
+// >>> $type = App\Models\ExpenseType::where('code', 'operasional')->first();
+// >>> $type->name = 'Biaya Operasional Baru';
+// >>> $type->save();

@@ -9,6 +9,7 @@ use App\Models\ExpenseType;
 use App\Models\MonthlyExpenseItem;
 use App\Models\OperationalExpenseItem;
 use App\Models\PettyCashItem;
+use App\Models\PnbpExpenseItem;
 use App\Models\Rab;
 use App\Models\RabPayment;
 use App\Models\SalaryExpenseItem;
@@ -19,14 +20,18 @@ use Illuminate\Support\Facades\DB;
 
 class DummyDashboardSeeder extends Seeder
 {
+    /**
+     * Mengisi database dengan data dummy lengkap (RAB, Item Pengeluaran, Pembayaran, Arus Kas)
+     * untuk simulasi visual grafik pada dashboard.
+     */
     public function run(): void
     {
         $admin = User::where('role', 'admin_keuangan')->first() ?? User::first();
         $types = ExpenseType::where('is_active', true)->get()->keyBy('code');
 
-        if (!$admin || $types->isEmpty()) {
+    if (!$admin || $types->isEmpty()) {
             return;
-        }
+    }
 
         DB::transaction(function () use ($admin, $types) {
             $lastBalance = (float) (CashFlow::orderByDesc('id')->value('balance') ?? 0);
@@ -126,18 +131,26 @@ class DummyDashboardSeeder extends Seeder
             'petty_cash' => $this->createPettyCashItems($rab, $date, $sequence),
             'gaji' => $this->createSalaryItems($rab, $sequence),
             'bulanan' => $this->createMonthlyItems($rab, $date, $sequence),
+            'pnbp' => $this->createPnbpItems($rab, $sequence),
             default => null,
         };
     }
 
     private function createOperationalItems(Rab $rab, int $sequence): void
     {
+        $groups = [
+            'Honor Pencari Peserta',
+            'Uang Transport / Honor Peserta Uji Serkom',
+            'Operasional Pembekalan',
+        ];
+
         foreach (['ATK Kantor', 'Transport Operasional', 'Konsumsi Rapat'] as $index => $name) {
             $volume = 2 + $index;
             $price = 275000 + (($sequence + $index) % 5) * 65000;
             OperationalExpenseItem::create([
                 'rab_id' => $rab->id,
-                'need_name' => $name,
+                'group_name' => $groups[$index % count($groups)],
+                'item_name' => $name,
                 'description' => 'Dummy kebutuhan operasional',
                 'volume' => $volume,
                 'unit' => 'paket',
@@ -213,6 +226,21 @@ class DummyDashboardSeeder extends Seeder
                 'admin_fee' => $adminFee,
                 'total_payment' => $expense + $adminFee,
                 'transaction_date' => $date->copy()->addDays($index + 1),
+            ]);
+        }
+    }
+
+    private function createPnbpItems(Rab $rab, int $sequence): void
+    {
+        foreach (['Sertifikasi Uji Kompetensi', 'Verifikasi Dokumen Teknik'] as $index => $name) {
+            $price = 1500000 + (($sequence + $index) % 3) * 500000;
+            PnbpExpenseItem::create([
+                'rab_id' => $rab->id,
+                'item_name' => $name,
+                'agenda_number' => 'AGD-SBK-' . str_pad((string) ($sequence + $index), 4, '0', STR_PAD_LEFT),
+                'level' => 'Level ' . (1 + (($sequence + $index) % 3)),
+                'tarif_pnbp' => $price,
+                'company_name' => ['PT PLN', 'PT Indonesia Power', 'PT PJB'][$index % 3],
             ]);
         }
     }

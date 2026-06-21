@@ -6,6 +6,9 @@ use App\Models\RabNotification;
 
 class RabNotificationController extends Controller
 {
+    /**
+     * Membuka notifikasi, menandainya sudah dibaca, dan mengarahkan pengguna ke halaman RAB yang bersangkutan.
+     */
     public function open(RabNotification $notification)
     {
         abort_unless($notification->user_id === auth()->id(), 403);
@@ -14,10 +17,11 @@ class RabNotificationController extends Controller
         $rab = $notification->rab;
 
         $route = 'rab.index';
-        if (auth()->user()->isManajer()) {
+        if (auth()->user()->isAdmin() && $rab?->payment()->exists()) {
+            $route = 'admin.input-nota.index';
+        } elseif (auth()->user()->isManajer()) {
             $route = 'manajer.rab.index';
-        }
-        if (auth()->user()->isDirektur()) {
+        } elseif (auth()->user()->isDirektur()) {
             $route = 'direktur.rab.index';
         }
 

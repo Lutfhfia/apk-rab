@@ -19,7 +19,10 @@ class RabManagementTest extends TestCase
     private User $admin;
     private User $manajer;
     private ExpenseType $expenseTypePettyCash;
+    private ExpenseType $expenseTypeGaji;
     private ExpenseType $expenseTypeBulanan;
+    private ExpenseType $expenseTypeListrik;
+    private ExpenseType $expenseTypePnbp;
 
     protected function setUp(): void
     {
@@ -31,23 +34,54 @@ class RabManagementTest extends TestCase
         ]);
 
         $this->manajer = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
 
-        $this->expenseTypePettyCash = ExpenseType::create([
-            'code' => 'petty_cash',
-            'name' => 'Petty Cash',
-            'description' => 'Pengeluaran kecil',
-            'is_active' => true,
-        ]);
+        $this->expenseTypePettyCash = ExpenseType::updateOrCreate(
+            ['code' => 'petty_cash'],
+            [
+                'name' => 'Petty Cash',
+                'description' => 'Pengeluaran kecil',
+                'is_active' => true,
+            ]
+        );
 
-        $this->expenseTypeBulanan = ExpenseType::create([
-            'code' => 'bulanan',
-            'name' => 'Biaya Bulanan',
-            'description' => 'Pembayaran rutin bulanan',
-            'is_active' => true,
-        ]);
+        $this->expenseTypeBulanan = ExpenseType::updateOrCreate(
+            ['code' => 'bulanan'],
+            [
+                'name' => 'Biaya Bulanan',
+                'description' => 'Pembayaran rutin bulanan',
+                'is_active' => true,
+            ]
+        );
+
+        $this->expenseTypeGaji = ExpenseType::updateOrCreate(
+            ['code' => 'gaji'],
+            [
+                'name' => 'Biaya Gaji',
+                'description' => 'Pembayaran gaji karyawan',
+                'is_active' => true,
+            ]
+        );
+
+        $this->expenseTypeListrik = ExpenseType::updateOrCreate(
+            ['code' => 'listrik'],
+            [
+                'name' => 'Biaya Listrik',
+                'description' => 'Pembayaran tagihan listrik bulanan',
+                'is_active' => true,
+            ]
+        );
+
+        $this->expenseTypePnbp = ExpenseType::updateOrCreate(
+            ['code' => 'pnbp'],
+            [
+                'name' => 'Pembayaran PNBP',
+                'description' => 'Pembayaran Penerimaan Negara Bukan Pajak',
+                'is_active' => true,
+            ]
+        );
     }
 
     // ── Create RAB (Petty Cash as Draft) ──
@@ -166,6 +200,81 @@ class RabManagementTest extends TestCase
     }
 
     // ── Submit a Draft ──
+
+    public function test_admin_can_create_listrik_rab_with_monthly_items(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/rab', [
+            'rab_month' => '06',
+            'rab_year' => '2026',
+            'request_date' => '2026-06-03',
+            'expense_type_id' => $this->expenseTypeListrik->id,
+            'period_month' => '6',
+            'description' => 'Biaya Listrik Juni 2026',
+            'action' => 'draft',
+            'items' => [
+                [
+                    'payment_name' => 'Tagihan Listrik Kantor',
+                    'registration_number' => 'PLN-001',
+                    'account_name' => 'PT SBK',
+                    'total_expense' => 2500000,
+                    'admin_fee' => 5000,
+                    'transaction_date' => '2026-06-05',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $rab = Rab::latest()->first();
+        $this->assertNotNull($rab);
+        $this->assertEquals(2505000.00, (float) $rab->total_amount);
+        $this->assertEquals(1, $rab->monthlyExpenseItems()->count());
+        $this->assertDatabaseHas('monthly_expense_items', [
+            'rab_id' => $rab->id,
+            'payment_name' => 'Tagihan Listrik Kantor',
+            'period' => 'Juni 2026',
+        ]);
+    }
+
+    public function test_admin_can_create_salary_rab_with_deduction(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/rab', [
+            'rab_month' => '06',
+            'rab_year' => '2026',
+            'request_date' => '2026-06-03',
+            'expense_type_id' => $this->expenseTypeGaji->id,
+            'description' => 'Gaji Juni 2026',
+            'action' => 'draft',
+            'items' => [
+                [
+                    'employee_name' => 'Budi',
+                    'position' => 'Admin',
+                    'bank_account_number' => '1234567890',
+                    'attendance_days' => 20,
+                    'base_salary' => 3000000,
+                    'meal_allowance_daily' => 25000,
+                    'transport_daily' => 20000,
+                    'overtime' => 150000,
+                    'deduction' => 100000,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $rab = Rab::latest()->first();
+        $this->assertNotNull($rab);
+        $this->assertEquals(3950000.00, (float) $rab->total_amount);
+
+        $this->assertDatabaseHas('salary_expense_items', [
+            'rab_id' => $rab->id,
+            'employee_name' => 'Budi',
+            'deduction' => 100000,
+            'total_salary' => 3950000,
+        ]);
+    }
 
     public function test_admin_can_submit_draft_rab(): void
     {
@@ -380,5 +489,83 @@ class RabManagementTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('expense_type_id');
+    }
+
+    // ── Create RAB (PNBP) ──
+
+    public function test_admin_can_create_pnbp_rab(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/rab', [
+            'rab_month' => '06',
+            'rab_year' => '2026',
+            'request_date' => '2026-06-07',
+            'expense_type_id' => $this->expenseTypePnbp->id,
+            'description' => 'Pembayaran PNBP Juni 2026',
+            'action' => 'draft',
+            'items' => [
+                [
+                    'item_name' => 'John Doe',
+                    'agenda_number' => 'AGN-001',
+                    'level' => '2',
+                    'tarif_pnbp' => 300000,
+                    'company_name' => 'PT Maju Jaya',
+                ],
+                [
+                    'item_name' => 'Jane Smith',
+                    'agenda_number' => 'AGN-002',
+                    'level' => '4',
+                    'tarif_pnbp' => 525000,
+                    'company_name' => 'CV Sejahtera',
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $rab = Rab::latest()->first();
+        $this->assertNotNull($rab);
+        // Total = 300000 + 525000 = 825000
+        $this->assertEquals(825000.00, (float) $rab->total_amount);
+        $this->assertEquals(2, $rab->pnbpExpenseItems()->count());
+
+        // Verify the items were stored correctly
+        $this->assertDatabaseHas('pnbp_expense_items', [
+            'rab_id' => $rab->id,
+            'item_name' => 'John Doe',
+            'agenda_number' => 'AGN-001',
+            'level' => '2',
+            'company_name' => 'PT Maju Jaya',
+        ]);
+
+        $this->assertDatabaseHas('pnbp_expense_items', [
+            'rab_id' => $rab->id,
+            'item_name' => 'Jane Smith',
+            'level' => '4',
+            'company_name' => 'CV Sejahtera',
+        ]);
+    }
+
+    public function test_pnbp_rab_requires_valid_level(): void
+    {
+        $response = $this->actingAs($this->admin)->post('/rab', [
+            'rab_month' => '06',
+            'rab_year' => '2026',
+            'request_date' => '2026-06-07',
+            'expense_type_id' => $this->expenseTypePnbp->id,
+            'description' => 'PNBP Test',
+            'action' => 'draft',
+            'items' => [
+                [
+                    'item_name' => 'Test',
+                    'agenda_number' => 'AGN-001',
+                    'level' => '5', // Invalid level
+                    'tarif_pnbp' => 300000,
+                    'company_name' => 'PT Test',
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('items.0.level');
     }
 }

@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::table('operational_expense_items', function (Blueprint $table) {
             $table->string('group_name')->after('rab_id')->nullable();
             $table->renameColumn('need_name', 'item_name');
@@ -23,6 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::table('operational_expense_items', function (Blueprint $table) {
             $table->dropColumn('group_name');
             $table->renameColumn('item_name', 'need_name');

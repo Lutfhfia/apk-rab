@@ -22,21 +22,33 @@ class RabNotification extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB terkait notifikasi ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);
     }
 
+    /**
+     * Relasi ke model User (Penerima notifikasi).
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Scope query untuk memfilter notifikasi yang belum dibaca.
+     */
     public function scopeUnread(Builder $query): Builder
     {
         return $query->whereNull('read_at');
     }
 
+    /**
+     * Menandai notifikasi telah dibaca.
+     */
     public function markAsRead(): void
     {
         if (!$this->read_at) {

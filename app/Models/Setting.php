@@ -12,7 +12,7 @@ class Setting extends Model
     ];
 
     /**
-     * Get a setting value by key.
+     * Mendapatkan nilai pengaturan berdasarkan key.
      */
     public static function getValue(string $key, string $default = ''): string
     {
@@ -20,7 +20,7 @@ class Setting extends Model
     }
 
     /**
-     * Set a setting value by key.
+     * Menyimpan atau memperbarui nilai pengaturan berdasarkan key.
      */
     public static function setValue(string $key, string $value): void
     {

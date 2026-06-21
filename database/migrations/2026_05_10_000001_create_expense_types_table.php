@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('expense_types', function (Blueprint $table) {
             $table->id();
             $table->string('name');
@@ -21,6 +22,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('expense_types');
     }
 };

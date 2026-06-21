@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('role', ['admin_keuangan', 'manajer_operasional', 'direktur'])->default('admin_keuangan');
+            $table->enum('role', ['admin_keuangan', 'manajer_keuangan', 'direktur'])->default('admin_keuangan');
             $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
@@ -45,6 +46,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');

@@ -25,7 +25,7 @@ class RoleAccessControlTest extends TestCase
         ]);
 
         $this->manajer = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
 
@@ -119,7 +119,7 @@ class RoleAccessControlTest extends TestCase
         $response->assertStatus(403);
     }
 
-    // ── Manajer Operasional Access ──
+    // ── Manajer Keuangan Access ──
 
     public function test_manajer_can_access_manajer_dashboard(): void
     {

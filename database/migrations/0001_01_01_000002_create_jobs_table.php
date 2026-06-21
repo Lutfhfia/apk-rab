@@ -11,6 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
             $table->string('queue')->index();
@@ -50,6 +51,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('jobs');
         Schema::dropIfExists('job_batches');
         Schema::dropIfExists('failed_jobs');

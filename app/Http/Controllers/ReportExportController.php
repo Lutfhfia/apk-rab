@@ -6,8 +6,10 @@ use App\Models\Rab;
 use App\Models\CashFlow;
 use App\Models\ReportExport;
 use App\Models\Setting;
+use App\Models\User;
 use App\Enums\RabStatus;
 use App\Enums\CashFlowType;
+use App\Enums\UserRole;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
@@ -59,7 +61,7 @@ class ReportExportController extends Controller
         $totalUangMasuk  = $cashFlows->sum('debit');
         $totalUangKeluar = $cashFlows->sum('credit');
 
-        // Saldo awal: ambil balance terakhir SEBELUM startDate
+        // Saldo awal: ambil saldo terakhir sebelum tanggal mulai (startDate)
         $saldoAwalRow = CashFlow::where('transaction_date', '<', $startDate)
             ->orderBy('transaction_date', 'desc')
             ->orderBy('id', 'desc')
@@ -72,7 +74,7 @@ class ReportExportController extends Controller
         // Data untuk preview
         $showPreview = $request->has('preview') && $canPreview;
 
-        // Build period label
+        // Susun label periode
         $bulanList = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
         if ($range == 1) {
             $periodLabel = $bulanList[(int)$month] . ' ' . $year;
@@ -105,8 +107,12 @@ class ReportExportController extends Controller
             ->latest('completed_at')
             ->get();
 
-        // Printer info
+        // Informasi pencetak
         $printedBy = auth()->user()->name ?? 'Admin Keuangan';
+
+        $signer = User::where('role', UserRole::MANAJER_KEUANGAN)->where('is_active', true)->first();
+        $signerName = $signer?->name ?? '(Nama Manajer Keuangan)';
+        $signerPosition = 'Manajer Keuangan';
 
         return view('reports.index', compact(
             'cashFlows',
@@ -128,7 +134,9 @@ class ReportExportController extends Controller
             'reportNumber',
             'canPreview',
             'canExportCashFlowPdf',
-            'sidebarRole'
+            'sidebarRole',
+            'signerName',
+            'signerPosition'
         ));
     }
 
@@ -137,7 +145,7 @@ class ReportExportController extends Controller
      */
     public function exportPdf(Request $request)
     {
-        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Operasional yang dapat mengunduh PDF arus kas.');
+        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Keuangan yang dapat mengunduh PDF arus kas.');
 
         $month = $request->input('month', now()->month);
         $year  = $request->input('year', now()->year);
@@ -165,13 +173,14 @@ class ReportExportController extends Controller
         $saldoAwal = $saldoAwalRow ? (float) $saldoAwalRow->balance : 0;
         $saldoAkhir = $saldoAwal + $totalUangMasuk - $totalUangKeluar;
 
-        // Settings
+        // Pengaturan
         $companyName    = Setting::getValue('company_name', 'PT Sertifikasi Bermutu Ketenagalistrikan');
         $companyAddress = Setting::getValue('company_address', '-');
         $companyPhone   = Setting::getValue('company_phone', '-');
         $companyEmail   = Setting::getValue('company_email', '-');
-        $signerName     = 'Mery Eryanti';
-        $signerPosition = 'Manajer Operasional';
+        $signer = User::where('role', UserRole::MANAJER_KEUANGAN)->where('is_active', true)->first();
+        $signerName     = $signer?->name ?? '(Nama Manajer Keuangan)';
+        $signerPosition = 'Manajer Keuangan';
 
         // Nomor laporan
         $romanMonths = [
@@ -183,14 +192,14 @@ class ReportExportController extends Controller
         $reportNumber = $request->input('report_number')
             ?: str_pad($reportCount, 3, '0', STR_PAD_LEFT) . '/LAP-AK/SBK/' . $romanMonths[(int) $month] . '/' . $year;
 
-        // Period label
+        // Label periode
         if ($range == 1) {
             $periodLabel = Carbon::create($year, $month, 1)->translatedFormat('F Y');
         } else {
             $periodLabel = $startDate->translatedFormat('F Y') . ' - ' . $endDate->translatedFormat('F Y');
         }
 
-        // Printer info
+        // Informasi pencetak
         $printedBy = auth()->user()->name ?? 'Admin Keuangan';
         $printDate = Carbon::now()->timezone('Asia/Jakarta')->translatedFormat('d F Y');
 
@@ -201,7 +210,7 @@ class ReportExportController extends Controller
             'month', 'year', 'range', 'printedBy', 'printDate'
         );
 
-        // Simpan record export
+        // Simpan data ekspor
         ReportExport::create([
             'exported_by'    => auth()->id(),
             'report_type'    => 'laporan_arus_kas_bulanan',

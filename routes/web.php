@@ -11,6 +11,7 @@ use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\RabDiscussionController;
 use App\Http\Controllers\RabNotificationController;
+use App\Http\Controllers\RabReceiptController;
 use App\Http\Middleware\CheckRole;
 use App\Http\Middleware\EnsureUserIsActive;
 
@@ -44,15 +45,16 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
     Route::get('/rab-notifications/{notification}', [RabNotificationController::class, 'open'])->name('rab.notifications.open');
     Route::get('/dashboard/chart-data', [DashboardController::class, 'chartData'])->name('dashboard.chart-data');
 
-    Route::middleware([CheckRole::class . ':admin_keuangan,manajer_operasional'])->group(function () {
+    Route::middleware([CheckRole::class . ':admin_keuangan,manajer_keuangan'])->group(function () {
         Route::get('/rab/{rab}/export-pdf', [RabController::class, 'exportPdf'])->name('rab.export-pdf');
     });
 
-    Route::middleware([CheckRole::class . ':manajer_operasional,direktur'])->group(function () {
+    Route::middleware([CheckRole::class . ':manajer_keuangan,direktur'])->group(function () {
         Route::get('/report', [ReportExportController::class, 'index'])->name('report.index');
+        Route::get('/receipts/recap/pdf', [PaymentController::class, 'recapPdf'])->name('rab.payments.recap.pdf');
     });
 
-    Route::middleware([CheckRole::class . ':manajer_operasional'])->group(function () {
+    Route::middleware([CheckRole::class . ':manajer_keuangan'])->group(function () {
         Route::get('/report/export-pdf', [ReportExportController::class, 'exportPdf'])->name('report.export-pdf');
     });
 
@@ -64,14 +66,14 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         Route::resource('/rab', RabController::class);
         Route::post('/rab/{rab}/submit', [RabController::class, 'submit'])->name('rab.submit');
 
-        // Payment Upload
-        Route::get('/rab/{rab}/payment/create', [PaymentController::class, 'create'])->name('rab.payment.create');
-        Route::post('/rab/{rab}/payment', [PaymentController::class, 'store'])->name('rab.payment.store');
+        // Receipts (Nota LPJ)
+        Route::post('/rab/{rab}/receipts', [RabReceiptController::class, 'store'])->name('rab.receipts.store');
+        Route::get('/admin/input-nota', [RabReceiptController::class, 'adminInputIndex'])->name('admin.input-nota.index');
 
     });
 
-    // ── MANAJER OPERASIONAL ──
-    Route::middleware([CheckRole::class . ':manajer_operasional'])->group(function () {
+    // ── Manajer Keuangan ──
+    Route::middleware([CheckRole::class . ':manajer_keuangan'])->group(function () {
         Route::get('/manajer/dashboard', [DashboardController::class, 'manajer'])->name('manajer.dashboard');
 
         // Daftar RAB (read-only list)
@@ -82,9 +84,20 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
         Route::post('/rab/{rab}/approve-manager', [ApprovalRabController::class, 'approveByManager'])->name('rab.approve.manager');
         Route::post('/rab/{rab}/reject-manager', [ApprovalRabController::class, 'reject'])->name('rab.reject.manager');
 
+        // Payment realization (Cairkan Dana ke Admin)
+        Route::get('/rab/{rab}/payment/create', [PaymentController::class, 'create'])->name('rab.payment.create');
+        Route::post('/rab/{rab}/payment', [PaymentController::class, 'store'])->name('rab.payment.store');
+
         // Arus Kas
         Route::get('/manajer/cash-flow', [CashFlowController::class, 'index'])->name('manajer.cash-flow.index');
         Route::post('/manajer/cash-flow', [CashFlowController::class, 'store'])->name('manajer.cash-flow.store');
+
+        // Validasi Nota / LPJ (Bukti Realisasi Pengeluaran)
+        Route::get('/manajer/receipts', [PaymentController::class, 'validationIndex'])->name('manajer.receipts.index');
+
+        // Receipts (Nota LPJ)
+        Route::post('/rab/{rab}/receipts/{receipt}/approve', [RabReceiptController::class, 'approve'])->name('rab.receipts.approve');
+        Route::post('/rab/{rab}/receipts/{receipt}/reject', [RabReceiptController::class, 'reject'])->name('rab.receipts.reject');
     });
 
     // ── DIREKTUR ──
@@ -110,6 +123,9 @@ Route::middleware(['auth', EnsureUserIsActive::class])->group(function () {
 
         // Arus Kas (Read Only)
         Route::get('/direktur/cash-flow', [CashFlowController::class, 'index'])->name('direktur.cash-flow.index');
+        
+        // Rekap LPJ
+        Route::get('/direktur/receipts', [PaymentController::class, 'validationIndex'])->name('direktur.receipts.index');
     });
 
 });

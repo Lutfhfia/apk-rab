@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('rab_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('rab_id')->constrained('rabs')->cascadeOnDelete();
@@ -23,6 +24,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('rab_notifications');
     }
 };

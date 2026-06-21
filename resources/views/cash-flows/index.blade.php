@@ -17,11 +17,11 @@
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
     <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <p class="text-xs font-bold text-gray-400 uppercase">Total Dana Masuk</p>
-        <p class="text-xl font-extrabold text-emerald-600 mt-1">Rp {{ number_format($totalDebit, 0, ',', '.') }}</p>
+        <p class="text-xl font-extrabold text-emerald-600 mt-1">Rp {{ number_format($totalCredit, 0, ',', '.') }}</p>
     </div>
     <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <p class="text-xs font-bold text-gray-400 uppercase">Total Dana Keluar</p>
-        <p class="text-xl font-extrabold text-red-600 mt-1">Rp {{ number_format($totalCredit, 0, ',', '.') }}</p>
+        <p class="text-xl font-extrabold text-red-600 mt-1">Rp {{ number_format($totalDebit, 0, ',', '.') }}</p>
     </div>
     <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
         <p class="text-xs font-bold text-gray-400 uppercase">Saldo Saat Ini</p>
@@ -127,8 +127,8 @@
                     <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Jenis</th>
                     <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">No RAB</th>
                     <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Keterangan</th>
-                    <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Dana Masuk</th>
-                    <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Dana Keluar</th>
+                    <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Kredit (Masuk)</th>
+                    <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Debit (Keluar)</th>
                     <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Saldo Berjalan</th>
                     <th class="sticky top-0 z-10 bg-gray-50 py-3.5 px-5 font-bold shadow-sm">Bukti</th>
                 </tr>
@@ -156,8 +156,8 @@
                         @endif
                     </td>
                     <td class="py-4 px-5">{{ $cf->description }}</td>
-                    <td class="py-4 px-5 text-emerald-600 font-semibold">{{ $cf->debit > 0 ? 'Rp ' . number_format($cf->debit, 0, ',', '.') : '-' }}</td>
-                    <td class="py-4 px-5 text-red-600 font-semibold">{{ $cf->credit > 0 ? 'Rp ' . number_format($cf->credit, 0, ',', '.') : '-' }}</td>
+                    <td class="py-4 px-5 text-emerald-600 font-semibold">{{ $cf->credit > 0 ? 'Rp ' . number_format($cf->credit, 0, ',', '.') : '-' }}</td>
+                    <td class="py-4 px-5 text-red-600 font-semibold">{{ $cf->debit > 0 ? 'Rp ' . number_format($cf->debit, 0, ',', '.') : '-' }}</td>
                     <td class="py-4 px-5 font-bold">Rp {{ number_format($cf->balance, 0, ',', '.') }}</td>
                     <td class="py-4 px-5">
                         @php
@@ -206,6 +206,8 @@
             </div>
         </div>
         <div class="p-4 border-t border-gray-100 bg-gray-50/50 flex justify-end">
+            <button type="button" onclick="closeProofModal()" class="ml-3 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm px-5 py-2 rounded-lg text-sm font-bold transition">Tolak</button>
+            []
             <a id="proofDownloadLink" href="#" download class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition flex items-center shadow-sm">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                 Unduh Bukti

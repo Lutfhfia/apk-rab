@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::table('cash_flows', function (Blueprint $table) {
             if (!Schema::hasColumn('cash_flows', 'proof_file_path')) {
                 $table->string('proof_file_path')->nullable()->after('balance');
@@ -17,6 +18,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::table('cash_flows', function (Blueprint $table) {
             if (Schema::hasColumn('cash_flows', 'proof_file_path')) {
                 $table->dropColumn('proof_file_path');

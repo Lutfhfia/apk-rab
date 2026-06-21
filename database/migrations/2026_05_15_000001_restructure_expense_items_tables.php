@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         // ── Petty Cash: tambah volume, satuan, harga satuan, admin, total ──
         Schema::table('petty_cash_items', function (Blueprint $table) {
             $table->decimal('volume', 15, 2)->default(1)->after('description');
@@ -39,6 +40,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::table('petty_cash_items', function (Blueprint $table) {
             $table->dropColumn(['volume', 'unit', 'unit_price', 'admin_fee', 'total']);
         });

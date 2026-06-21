@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 class UserManagementController extends Controller
 {
     /**
-     * Display a listing of users.
+     * Menampilkan daftar pengguna (user) dengan pencarian, filter role, dan filter status.
      */
     public function index(Request $request)
     {
@@ -44,7 +44,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Show the form for creating a new user.
+     * Menampilkan formulir tambah pengguna baru.
      */
     public function create()
     {
@@ -52,7 +52,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Store a newly created user.
+     * Menyimpan data pengguna baru yang didaftarkan.
      */
     public function store(Request $request)
     {
@@ -60,7 +60,7 @@ class UserManagementController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
-            'role' => ['required', Rule::in([UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_OPERASIONAL->value])],
+            'role' => ['required', Rule::in([UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_KEUANGAN->value])],
             'phone_number' => 'nullable|string|max:20',
         ]);
 
@@ -78,7 +78,7 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Show the form for editing the specified user.
+     * Menampilkan formulir edit data pengguna.
      */
     public function edit(string $id)
     {
@@ -87,13 +87,13 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Update the specified user.
+     * Memperbarui data pengguna yang diubah.
      */
     public function update(Request $request, string $id)
     {
         $user = User::withTrashed()->findOrFail($id);
 
-        $allowedRoles = [UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_OPERASIONAL->value];
+        $allowedRoles = [UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_KEUANGAN->value];
         if ($user->role === UserRole::DIREKTUR) {
             $allowedRoles[] = UserRole::DIREKTUR->value;
         }
@@ -116,10 +116,13 @@ class UserManagementController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $user->update(['password' => $request->password]);
+            // Gunakan query DB untuk menghindari cast 'hashed' pada model (yang akan melakukan double-hash)
+            \Illuminate\Support\Facades\DB::table('users')
+                ->where('id', $user->id)
+                ->update(['password' => \Illuminate\Support\Facades\Hash::make($request->password)]);
         }
 
-        // Restore if soft-deleted and being reactivated
+        // Pulihkan (restore) data jika sebelumnya soft-deleted dan diaktifkan kembali
         if ($user->trashed() && $request->is_active) {
             $user->restore();
         }
@@ -129,13 +132,13 @@ class UserManagementController extends Controller
     }
 
     /**
-     * Toggle user active status.
+     * Mengubah status aktif/nonaktif akun pengguna.
      */
     public function toggleActive(string $id)
     {
         $user = User::withTrashed()->findOrFail($id);
 
-        // Don't allow deactivating yourself
+        // Jangan izinkan pengguna menonaktifkan akun sendiri
         if ($user->id === auth()->id()) {
             return back()->with('error', 'Anda tidak dapat menonaktifkan akun Anda sendiri.');
         }

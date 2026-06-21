@@ -9,6 +9,7 @@ use App\Models\OperationalExpenseItem;
 use App\Models\PettyCashItem;
 use App\Models\SalaryExpenseItem;
 use App\Models\MonthlyExpenseItem;
+use App\Models\PnbpExpenseItem;
 use App\Enums\RabStatus;
 use App\Enums\UserRole;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 class RabController extends Controller
 {
     /**
-     * Display a listing of RABs.
+     * Menampilkan daftar RAB.
      */
     public function index(Request $request)
     {
@@ -29,30 +30,34 @@ class RabController extends Controller
             'pettyCashItems',
             'salaryExpenseItems',
             'monthlyExpenseItems',
+            'pnbpExpenseItems',
             'approvals.user',
             'discussions.user',
             'payment.paidBy',
+            'payment.validator',
+            'receipts.uploader',
+            'receipts.validator',
             'auditLogs.user',
         ]);
 
-        // Filter by status
+        // Filter berdasarkan status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         } else {
             $query->where('status', RabStatus::DIAJUKAN);
         }
 
-        // Filter by expense type
+        // Filter berdasarkan jenis pengeluaran
         if ($request->filled('expense_type')) {
             $query->where('expense_type_id', $request->expense_type);
         }
 
-        // Search by RAB number
+        // Pencarian berdasarkan nomor RAB
         if ($request->filled('search')) {
             $query->where('rab_number', 'like', '%' . $request->search . '%');
         }
 
-        // Filter by date range
+        // Filter berdasarkan rentang tanggal pengajuan
         if ($request->filled('start_date')) {
             $query->whereDate('request_date', '>=', $request->start_date);
         }
@@ -71,9 +76,13 @@ class RabController extends Controller
                 'pettyCashItems',
                 'salaryExpenseItems',
                 'monthlyExpenseItems',
+                'pnbpExpenseItems',
                 'approvals.user',
                 'discussions.user',
                 'payment.paidBy',
+                'payment.validator',
+                'receipts.uploader',
+                'receipts.validator',
                 'auditLogs.user',
             ])->find($request->open_rab_id);
             
@@ -93,7 +102,7 @@ class RabController extends Controller
     }
 
     /**
-     * Display RAB listing for Manajer/Direktur (read-only, non-draft only).
+     * Menampilkan daftar RAB untuk Manajer/Direktur (read-only, non-draft saja).
      */
     public function listForApprover(Request $request)
     {
@@ -104,34 +113,38 @@ class RabController extends Controller
                 'pettyCashItems',
                 'salaryExpenseItems',
                 'monthlyExpenseItems',
+                'pnbpExpenseItems',
                 'approvals.user',
                 'discussions.user',
                 'payment.paidBy',
+                'payment.validator',
+                'receipts.uploader',
+                'receipts.validator',
                 'auditLogs.user',
             ])
             ->where('status', '!=', RabStatus::DRAFT);
 
-        // Determine route prefix based on user role
+        // Menentukan prefix route berdasarkan role pengguna
         $role = auth()->user()->isManajer() ? 'manajer' : 'direktur';
 
-        // Default status depends on role: show what needs THEIR review first
+        // Status default bergantung pada role: tampilkan yang memerlukan tinjauan MEREKA terlebih dahulu
         $defaultStatus = $role === 'direktur'
             ? RabStatus::DISETUJUI_MANAJER
             : RabStatus::DIAJUKAN;
 
-        // Filter by status
+        // Filter berdasarkan status
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         } else {
             $query->where('status', $defaultStatus);
         }
 
-        // Filter by expense type
+        // Filter berdasarkan jenis pengeluaran
         if ($request->filled('expense_type')) {
             $query->where('expense_type_id', $request->expense_type);
         }
 
-        // Search by RAB number or description
+        // Pencarian berdasarkan nomor RAB atau deskripsi
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('rab_number', 'like', '%' . $request->search . '%')
@@ -139,7 +152,7 @@ class RabController extends Controller
             });
         }
 
-        // Filter by date range
+        // Filter berdasarkan rentang tanggal
         if ($request->filled('start_date')) {
             $query->whereDate('request_date', '>=', $request->start_date);
         }
@@ -158,9 +171,13 @@ class RabController extends Controller
                 'pettyCashItems',
                 'salaryExpenseItems',
                 'monthlyExpenseItems',
+                'pnbpExpenseItems',
                 'approvals.user',
                 'discussions.user',
                 'payment.paidBy',
+                'payment.validator',
+                'receipts.uploader',
+                'receipts.validator',
                 'auditLogs.user',
             ])->find($request->open_rab_id);
             
@@ -187,7 +204,7 @@ class RabController extends Controller
     }
 
     /**
-     * Store a newly created RAB.
+     * Menyimpan RAB baru yang dibuat ke database.
      */
     public function store(Request $request)
     {
@@ -205,10 +222,10 @@ class RabController extends Controller
 
         $expenseType = ExpenseType::findOrFail($request->expense_type_id);
 
-        // Validate expense items based on type
+        // Validasi item pengeluaran berdasarkan jenisnya
         $this->validateExpenseItems($request, $expenseType->code);
 
-        // Auto-derive period_year from request_date
+        // Mengambil period_year secara otomatis dari request_date
         $periodYear = date('Y', strtotime($request->request_date));
 
         DB::beginTransaction();
@@ -234,13 +251,13 @@ class RabController extends Controller
                 'submitted_at' => $request->action === 'submit' ? now() : null,
             ]);
 
-            // Store expense items
+            // Menyimpan item pengeluaran
             $this->storeExpenseItems($rab, $request, $expenseType->code);
 
-            // Recalculate total
+            // Hitung ulang total
             $rab->recalculateTotal();
 
-            // Audit log
+            // Catat log aktivitas (audit log)
             AuditLog::log(
                 $request->action === 'submit' ? 'submit_rab' : 'create_rab',
                 $request->action === 'submit'
@@ -250,23 +267,29 @@ class RabController extends Controller
             );
             if ($request->action === 'submit') {
                 $rab->notifyRole(
-                    UserRole::MANAJER_OPERASIONAL->value,
+                    UserRole::MANAJER_KEUANGAN->value,
                     'RAB baru perlu diperiksa',
                     'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-'),
                     null,
-                    $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab))
+                    fn ($manajer) => $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer)
                 );
             }
 
             DB::commit();
 
             if ($request->action === 'submit') {
+                $manajer = \App\Models\User::where('role', UserRole::MANAJER_KEUANGAN->value)->where('is_active', true)->first();
+                $waText = $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer);
+                $waPhone = $manajer ? $manajer->phone_number : '';
+                $waUrl = 'https://api.whatsapp.com/send?phone=' . urlencode($waPhone) . '&text=' . urlencode($waText);
+
                 return redirect()->route('rab.index')
                     ->with('success', 'RAB berhasil diajukan!')
                     ->with('submitted_rab_id', $rab->id)
                     ->with('submitted_rab_number', $rab->rab_number)
                     ->with('submitted_rab_total', $rab->total_amount)
-                    ->with('submitted_rab_type', $rab->expenseType->name ?? '-');
+                    ->with('submitted_rab_type', $rab->expenseType->name ?? '-')
+                    ->with('submitted_rab_wa_url', $waUrl);
             }
 
             return redirect()->route('rab.index', ['status' => RabStatus::DRAFT->value])
@@ -285,13 +308,17 @@ class RabController extends Controller
             'approvals.user',
             'discussions.user',
             'payment.paidBy',
+            'payment.validator',
+            'receipts.uploader',
+            'receipts.validator',
             'operationalExpenseItems',
             'pettyCashItems',
             'salaryExpenseItems',
             'monthlyExpenseItems',
+            'pnbpExpenseItems',
         ]);
 
-        // Load the appropriate expense items
+        // Memuat item pengeluaran yang sesuai
         $expenseItems = $rab->getExpenseItems();
 
         $route = 'rab.index';
@@ -307,12 +334,12 @@ class RabController extends Controller
 
     public function edit(Rab $rab)
     {
-        // Only allow Admin Keuangan to edit
+        // Hanya izinkan Admin Keuangan untuk mengedit
         if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
             abort(403, 'Hanya Admin Keuangan yang dapat mengedit RAB.');
         }
 
-        // Only allow editing draft, rejected, or submitted (diajukan) RABs
+        // Hanya izinkan mengedit RAB berstatus Draft, Ditolak, atau Diajukan
         if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK, RabStatus::DIAJUKAN])) {
             return back()->with('error', 'RAB ini tidak dapat diedit.');
         }
@@ -322,16 +349,16 @@ class RabController extends Controller
     }
 
     /**
-     * Update the specified RAB.
+     * Memperbarui RAB yang ditentukan.
      */
     public function update(Request $request, Rab $rab)
     {
-        // Only allow Admin Keuangan to update
+        // Hanya izinkan Admin Keuangan untuk memperbarui
         if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
             abort(403, 'Hanya Admin Keuangan yang dapat mengedit RAB.');
         }
 
-        // Only allow updating draft, rejected, or submitted (diajukan) RABs
+        // Hanya izinkan memperbarui RAB berstatus Draft, Ditolak, atau Diajukan
         if (!in_array($rab->status, [RabStatus::DRAFT, RabStatus::DITOLAK, RabStatus::DIAJUKAN])) {
             return back()->with('error', 'RAB ini tidak dapat diedit.');
         }
@@ -348,7 +375,7 @@ class RabController extends Controller
         $expenseType = ExpenseType::findOrFail($request->expense_type_id);
         $this->validateExpenseItems($request, $expenseType->code);
 
-        // Auto-derive period_year from request_date
+        // Mengambil period_year secara otomatis dari request_date
         $periodYear = date('Y', strtotime($request->request_date));
 
         DB::beginTransaction();
@@ -367,16 +394,17 @@ class RabController extends Controller
                 'submitted_at' => $request->action === 'submit' ? now() : $rab->submitted_at,
             ]);
 
-            // Delete old items and store new ones
+            // Hapus item pengeluaran lama dan simpan yang baru
             $rab->operationalExpenseItems()->delete();
             $rab->pettyCashItems()->delete();
             $rab->salaryExpenseItems()->delete();
             $rab->monthlyExpenseItems()->delete();
+            $rab->pnbpExpenseItems()->delete();
 
             $this->storeExpenseItems($rab, $request, $expenseType->code);
             $rab->recalculateTotal();
 
-            // Audit log
+            // Catat log aktivitas (audit log)
             AuditLog::log(
                 'update_rab',
                 "RAB {$rab->rab_number} diperbarui oleh " . auth()->user()->name,
@@ -386,23 +414,29 @@ class RabController extends Controller
             );
             if ($request->action === 'submit') {
                 $rab->notifyRole(
-                    UserRole::MANAJER_OPERASIONAL->value,
+                    UserRole::MANAJER_KEUANGAN->value,
                     'RAB revisi perlu diperiksa',
                     'Admin Keuangan ' . auth()->user()->name . " mengajukan kembali RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-'),
                     null,
-                    $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab))
+                    fn ($manajer) => $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer)
                 );
             }
 
             DB::commit();
 
             if ($request->action === 'submit') {
+                $manajer = \App\Models\User::where('role', UserRole::MANAJER_KEUANGAN->value)->where('is_active', true)->first();
+                $waText = $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer);
+                $waPhone = $manajer ? $manajer->phone_number : '';
+                $waUrl = 'https://api.whatsapp.com/send?phone=' . urlencode($waPhone) . '&text=' . urlencode($waText);
+
                 return redirect()->route('rab.index')
                     ->with('success', 'RAB berhasil diajukan kembali!')
                     ->with('submitted_rab_id', $rab->id)
                     ->with('submitted_rab_number', $rab->rab_number)
                     ->with('submitted_rab_total', $rab->total_amount)
-                    ->with('submitted_rab_type', $rab->expenseType->name ?? '-');
+                    ->with('submitted_rab_type', $rab->expenseType->name ?? '-')
+                    ->with('submitted_rab_wa_url', $waUrl);
             }
 
             return redirect()->route('rab.show', $rab)
@@ -414,11 +448,11 @@ class RabController extends Controller
     }
 
     /**
-     * Remove the specified RAB (soft delete).
+     * Menghapus RAB yang ditentukan (soft delete).
      */
     public function destroy(Rab $rab)
     {
-        // Only allow Admin Keuangan to delete
+        // Hanya izinkan Admin Keuangan untuk menghapus
         if (auth()->user()->role !== UserRole::ADMIN_KEUANGAN) {
             abort(403, 'Hanya Admin Keuangan yang dapat menghapus RAB.');
         }
@@ -439,7 +473,7 @@ class RabController extends Controller
     }
 
     /**
-     * Submit a draft RAB.
+     * Mengajukan draf RAB menjadi status Diajukan.
      */
     public function submit(Rab $rab)
     {
@@ -460,17 +494,25 @@ class RabController extends Controller
 
 
         $rab->notifyRole(
-            UserRole::MANAJER_OPERASIONAL->value,
+            UserRole::MANAJER_KEUANGAN->value,
             'RAB baru perlu diperiksa',
-            'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
+            'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-'),
+            null,
+            fn ($manajer) => $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer)
         );
+
+        $manajer = \App\Models\User::where('role', UserRole::MANAJER_KEUANGAN->value)->where('is_active', true)->first();
+        $waText = $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab), $manajer);
+        $waPhone = $manajer ? $manajer->phone_number : '';
+        $waUrl = 'https://api.whatsapp.com/send?phone=' . urlencode($waPhone) . '&text=' . urlencode($waText);
 
         return redirect()->route('rab.index')
             ->with('success', 'RAB berhasil diajukan!')
             ->with('submitted_rab_id', $rab->id)
             ->with('submitted_rab_number', $rab->rab_number)
             ->with('submitted_rab_total', $rab->total_amount)
-            ->with('submitted_rab_type', $rab->expenseType->name ?? '-');
+            ->with('submitted_rab_type', $rab->expenseType->name ?? '-')
+            ->with('submitted_rab_wa_url', $waUrl);
     }
 
     // ── Private Helpers ──
@@ -510,11 +552,23 @@ class RabController extends Controller
                 ]);
                 break;
             case 'bulanan':
+            case 'listrik':
+            case 'air_pam':
                 $request->validate([
                     'items' => 'required|array|min:1',
                     'items.*.payment_name' => 'required|string',
                     'items.*.total_expense' => 'required|numeric|min:0',
                     'items.*.transaction_date' => 'required|date',
+                ]);
+                break;
+            case 'pnbp':
+                $request->validate([
+                    'items' => 'required|array|min:1',
+                    'items.*.item_name' => 'required|string',
+                    'items.*.agenda_number' => 'required|string',
+                    'items.*.level' => 'required|in:1,2,3,4',
+                    'items.*.tarif_pnbp' => 'required|numeric|min:0',
+                    'items.*.company_name' => 'required|string',
                 ]);
                 break;
         }
@@ -564,7 +618,8 @@ class RabController extends Controller
                     $mealDaily = (float) ($item['meal_allowance_daily'] ?? 0);
                     $transportDaily = (float) ($item['transport_daily'] ?? 20000);
                     $overtime = (float) ($item['overtime'] ?? 0);
-                    $totalSalary = $baseSalary + ($attendanceDays * $mealDaily) + ($attendanceDays * $transportDaily) + $overtime;
+                    $deduction = (float) ($item['deduction'] ?? 0);
+                    $totalSalary = $baseSalary + ($attendanceDays * $mealDaily) + ($attendanceDays * $transportDaily) + $overtime - $deduction;
 
                     SalaryExpenseItem::create([
                         'rab_id' => $rab->id,
@@ -577,6 +632,7 @@ class RabController extends Controller
                         'meal_allowance_daily' => $mealDaily,
                         'transport_daily' => $transportDaily,
                         'overtime' => $overtime,
+                        'deduction' => $deduction,
                         'total_salary' => $totalSalary,
                         'salary_nominal' => $totalSalary,
                         'notes' => $item['notes'] ?? null,
@@ -584,14 +640,21 @@ class RabController extends Controller
                     ]);
                     break;
                 case 'bulanan':
+                case 'listrik':
+                case 'air_pam':
                     $totalExpense = (float) ($item['total_expense'] ?? 0);
                     $adminFee = (float) ($item['admin_fee'] ?? 0);
+                    $period = $item['period'] ?? null;
+                    if (blank($period)) {
+                        $period = $rab->period_label ?: $rab->request_date?->format('m/Y') ?: '-';
+                    }
+
                     MonthlyExpenseItem::create([
                         'rab_id' => $rab->id,
                         'payment_name' => $item['payment_name'],
                         'registration_number' => $item['registration_number'] ?? null,
                         'account_name' => $item['account_name'] ?? null,
-                        'period' => $item['period'] ?? null,
+                        'period' => $period,
                         'description' => $item['description'] ?? null,
                         'total_expense' => $totalExpense,
                         'bill_nominal' => $totalExpense,
@@ -600,19 +663,29 @@ class RabController extends Controller
                         'transaction_date' => $item['transaction_date'] ?? null,
                     ]);
                     break;
+                case 'pnbp':
+                    PnbpExpenseItem::create([
+                        'rab_id' => $rab->id,
+                        'item_name' => $item['item_name'],
+                        'agenda_number' => $item['agenda_number'],
+                        'level' => $item['level'],
+                        'tarif_pnbp' => (float) $item['tarif_pnbp'],
+                        'company_name' => $item['company_name'],
+                    ]);
+                    break;
             }
         }
     }
 
     /**
-     * Export RAB to PDF.
+     * Mengekspor data RAB ke file PDF.
      */
     public function exportPdf(Rab $rab)
     {
         abort_unless(
             auth()->user()?->isAdmin() || auth()->user()?->isManajer(),
             403,
-            'Hanya Admin Keuangan dan Manajer Operasional yang dapat mengunduh PDF RAB.'
+            'Hanya Admin Keuangan dan Manajer Keuangan yang dapat mengunduh PDF RAB.'
         );
 
         $rab->load(['user', 'expenseType', 'payment']);
@@ -623,16 +696,16 @@ class RabController extends Controller
         $companyPhone   = \App\Models\Setting::getValue('company_phone', '-');
         $companyEmail   = \App\Models\Setting::getValue('company_email', '-');
         
-        // Ambil nama Manajer Operasional (prioritaskan yang meng-approve, jika belum ada ambil dari database user)
-        $managerApproval = $rab->approvals->where('role', \App\Enums\UserRole::MANAJER_OPERASIONAL->value)->where('status', \App\Enums\ApprovalStatus::APPROVED)->first();
+        // Ambil nama Manajer Keuangan (prioritaskan yang meng-approve, jika belum ada ambil dari database user)
+        $managerApproval = $rab->approvals->where('role', \App\Enums\UserRole::MANAJER_KEUANGAN->value)->where('status', \App\Enums\ApprovalStatus::APPROVED)->first();
         if ($managerApproval && $managerApproval->user) {
             $signerName = $managerApproval->user->name;
         } else {
-            $manager = \App\Models\User::where('role', \App\Enums\UserRole::MANAJER_OPERASIONAL->value)->first();
-            $signerName = $manager ? $manager->name : 'Mery Eryanti';
+            $manager = \App\Models\User::where('role', \App\Enums\UserRole::MANAJER_KEUANGAN->value)->first();
+            $signerName = $manager ? $manager->name : '(Nama Manajer Keuangan)';
         }
         
-        $signerPosition = 'Manajer Operasional';
+        $signerPosition = 'Manajer Keuangan';
 
         $data = compact(
             'rab', 'expenseItems',

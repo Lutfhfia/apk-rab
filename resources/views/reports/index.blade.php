@@ -158,11 +158,21 @@
                 <label class="block text-xs font-bold text-gray-500 mb-1">Urutan</label>
                 <div class="flex border border-gray-200 rounded-lg overflow-hidden h-[38px] bg-white">
                     <input type="hidden" name="sort" id="sort_input" value="{{ request('sort', 'asc') }}">
-                    <button type="button" onclick="setSort('desc')" id="btn_sort_desc" class="flex-1 flex items-center justify-center transition-colors {{ request('sort') === 'desc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terbaru (Urutan Ke Bawah)">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7"/></svg>
+                    <button type="button" onclick="setSort('desc')" id="btn_sort_desc"
+                        class="flex-1 flex items-center justify-center transition-colors {{ request('sort') === 'desc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}"
+                        title="Terbaru (Urutan Ke Bawah)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
+                        </svg>
                     </button>
-                    <button type="button" onclick="setSort('asc')" id="btn_sort_asc" class="flex-1 flex items-center justify-center border-l border-gray-200 transition-colors {{ request('sort', 'asc') === 'asc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}" title="Terlama (Urutan Ke Atas)">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 11l7-7 7 7M5 18l7-7 7 7"/></svg>
+                    <button type="button" onclick="setSort('asc')" id="btn_sort_asc"
+                        class="flex-1 flex items-center justify-center border-l border-gray-200 transition-colors {{ request('sort', 'asc') === 'asc' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-50' }}"
+                        title="Terlama (Urutan Ke Atas)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M5 11l7-7 7 7M5 18l7-7 7 7" />
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -485,11 +495,11 @@
                                 <p class="text-[11px] text-gray-600">Palembang,
                                     {{ \Carbon\Carbon::now()->translatedFormat('d F Y') }}</p>
                                 <p class="text-[12px] font-black text-gray-900 mt-1">Mengetahui</p>
-                                <p class="text-[10px] font-bold text-gray-500 mt-1">Manajer Operasional</p>
+                                <p class="text-[10px] font-bold text-gray-500 mt-1">{{ $signerPosition }}</p>
                                 <div class="h-24"></div>
                                 <p
                                     class="text-[12px] font-black text-gray-900 border-b-2 border-gray-900 pb-0.5 inline-block">
-                                    Mery Eryanti</p>
+                                    {{ $signerName }}</p>
                             </div>
                         </div>
                     </div>

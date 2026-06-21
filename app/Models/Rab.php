@@ -39,72 +39,124 @@ class Rab extends Model
         ];
     }
 
-    // ── Relationships ──
+    // ── Hubungan / Relasi Tabel ──
 
+    /**
+     * Relasi ke model User (Pembuat RAB).
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Relasi ke model ExpenseType (Tipe Pengeluaran RAB).
+     */
     public function expenseType()
     {
         return $this->belongsTo(ExpenseType::class);
     }
 
+    /**
+     * Relasi ke model OperationalExpenseItem (Item Pengeluaran Operasional).
+     */
     public function operationalExpenseItems()
     {
         return $this->hasMany(OperationalExpenseItem::class);
     }
 
+    /**
+     * Relasi ke model PettyCashItem (Item Pengeluaran Kas Kecil).
+     */
     public function pettyCashItems()
     {
         return $this->hasMany(PettyCashItem::class);
     }
 
+    /**
+     * Relasi ke model SalaryExpenseItem (Item Pengeluaran Gaji).
+     */
     public function salaryExpenseItems()
     {
         return $this->hasMany(SalaryExpenseItem::class);
     }
 
+    /**
+     * Relasi ke model MonthlyExpenseItem (Item Pengeluaran Bulanan).
+     */
     public function monthlyExpenseItems()
     {
         return $this->hasMany(MonthlyExpenseItem::class);
     }
 
+    /**
+     * Relasi ke model PnbpExpenseItem (Item Pengeluaran PNBP).
+     */
+    public function pnbpExpenseItems()
+    {
+        return $this->hasMany(PnbpExpenseItem::class);
+    }
+
+    /**
+     * Relasi ke model RabApproval (Log Persetujuan RAB).
+     */
     public function approvals()
     {
         return $this->hasMany(RabApproval::class);
     }
 
+    /**
+     * Relasi ke model RabPayment (Detail Pembayaran RAB).
+     */
     public function payment()
     {
         return $this->hasOne(RabPayment::class);
     }
 
+    /**
+     * Relasi ke model RabReceipt (Nota Belanja / LPJ).
+     */
+    public function receipts()
+    {
+        return $this->hasMany(RabReceipt::class);
+    }
+
+    /**
+     * Relasi ke model CashFlow (Arus Kas yang dihasilkan dari RAB).
+     */
     public function cashFlows()
     {
         return $this->hasMany(CashFlow::class);
     }
 
+    /**
+     * Relasi ke model AuditLog (Riwayat aktivitas pada RAB).
+     */
     public function auditLogs()
     {
         return $this->hasMany(AuditLog::class);
     }
 
+    /**
+     * Relasi ke model RabDiscussion (Kolom diskusi/komentar untuk RAB).
+     */
     public function discussions()
     {
         return $this->hasMany(RabDiscussion::class);
     }
 
+    /**
+     * Relasi ke model RabNotification (Notifikasi terkait status RAB).
+     */
     public function notifications()
     {
         return $this->hasMany(RabNotification::class);
     }
 
-    // ── Helpers ──
+    // ── Fungsi Pembantu / Helper ──
 
     /**
-     * Get the expense items based on the expense type.
+     * Mengambil daftar item pengeluaran sesuai dengan tipe pengeluaran RAB.
      */
     public function getExpenseItems()
     {
@@ -112,13 +164,14 @@ class Rab extends Model
             'operasional' => $this->operationalExpenseItems,
             'petty_cash' => $this->pettyCashItems,
             'gaji' => $this->salaryExpenseItems,
-            'bulanan' => $this->monthlyExpenseItems,
+            'bulanan', 'listrik', 'air_pam' => $this->monthlyExpenseItems,
+            'pnbp' => $this->pnbpExpenseItems,
             default => collect(),
         };
     }
 
     /**
-     * Get period month name.
+     * Mendapatkan nama bulan berdasarkan nomor bulan periode.
      */
     public function getPeriodMonthNameAttribute()
     {
@@ -128,10 +181,13 @@ class Rab extends Model
             5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
             9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
         ];
-        // Handle if it's already a string or invalid integer
+        // Tangani jika sudah berupa string atau integer yang tidak valid
         return $bulanList[(int) $this->period_month] ?? $this->period_month;
     }
 
+    /**
+     * Mendapatkan label lengkap periode (Bulan Tahun).
+     */
     public function getPeriodLabelAttribute(): string
     {
         $year = $this->period_year ?: $this->request_date?->format('Y');
@@ -139,39 +195,52 @@ class Rab extends Model
         return trim($this->period_month_name . ' ' . $year);
     }
 
+    /**
+     * Menghitung jumlah item pengeluaran yang terikat pada RAB.
+     */
     public function getExpenseItemsCountAttribute(): int
     {
         return $this->getExpenseItems()->count();
     }
 
+    /**
+     * Mendapatkan label jumlah item berdasarkan jenis pengeluaran (contoh: "5 penerima" atau "10 item").
+     */
     public function getExpenseItemsCountLabelAttribute(): string
     {
         $label = match ($this->expenseType?->code) {
             'gaji' => 'penerima',
-            'operasional', 'petty_cash', 'bulanan' => 'item',
+            'operasional', 'petty_cash', 'bulanan', 'listrik', 'air_pam', 'pnbp' => 'item',
             default => 'data',
         };
 
         return $this->expense_items_count . ' ' . $label;
     }
 
+    /**
+     * Mengubah nominal total RAB menjadi teks terbilang bahasa Indonesia.
+     */
     public function getTotalAmountInWordsAttribute(): string
     {
         return trim($this->numberToIndonesianWords((int) round((float) $this->total_amount))) . ' rupiah';
     }
 
-    public function buildWhatsAppSubmissionMessage(?string $approvalUrl = null): string
+    /**
+     * Membuat format pesan pengajuan pembayaran untuk dikirim via WhatsApp.
+     */
+    public function buildWhatsAppSubmissionMessage(?string $approvalUrl = null, ?User $recipient = null): string
     {
         $paymentType = $this->expenseType->name ?? 'RAB';
         $period = $this->period_label ?: '-';
         $adminName = $this->user->name ?? '-';
+        $recipientName = $recipient?->name ?: 'Bapak/Ibu';
         $importantNote = $this->description
             ? $this->description
             : 'Pengajuan pembayaran ini dibutuhkan untuk kelancaran operasional periode ' . $period . '.';
         $approvalUrl = $approvalUrl ?: url('/manajer/rab/' . $this->id);
 
         return "Pengajuan Pembayaran {$paymentType} - {$period}\n\n"
-            . "Yth. Pak Alpian\n\n"
+            . "Yth. {$recipientName}\n\n"
             . "Saya bermaksud mengajukan pembayaran {$paymentType} untuk periode {$period} dengan total kebutuhan dana sebesar Rp"
             . number_format((float) $this->total_amount, 0, ',', '.')
             . " ({$this->total_amount_in_words}).\n\n"
@@ -185,6 +254,43 @@ class Rab extends Model
             . "{$adminName}";
     }
 
+    /**
+     * Mendapatkan status pencairan dana.
+     */
+    public function getPaymentStatusAttribute(): string
+    {
+        return $this->payment()->exists() ? 'Sudah Dicairkan' : 'Belum Dicairkan';
+    }
+
+    /**
+     * Mendapatkan status LPJ berdasarkan riwayat nota yang diupload.
+     */
+    public function getLpjStatusAttribute(): string
+    {
+        if (!$this->payment()->exists()) {
+            return '-';
+        }
+
+        $receipts = $this->receipts;
+
+        if ($receipts->isEmpty()) {
+            return 'Belum Upload';
+        }
+
+        if ($receipts->contains('status', \App\Enums\RabReceiptStatus::VALID)) {
+            return 'Valid';
+        }
+
+        if ($receipts->contains('status', \App\Enums\RabReceiptStatus::MENUNGGU_VALIDASI)) {
+            return 'Menunggu Validasi';
+        }
+
+        return 'Ditolak';
+    }
+
+    /**
+     * Menambahkan catatan diskusi baru pada RAB.
+     */
     public function addDiscussionNote(int $userId, string $message): RabDiscussion
     {
         return $this->discussions()->create([
@@ -193,6 +299,9 @@ class Rab extends Model
         ]);
     }
 
+    /**
+     * Mengirim notifikasi internal sistem dan WhatsApp ke user tertentu.
+     */
     public function notifyUser(int $userId, string $title, string $message, ?string $waMessage = null): RabNotification
     {
         $notification = $this->notifications()->create([
@@ -210,17 +319,25 @@ class Rab extends Model
         return $notification;
     }
 
-    public function notifyRole(string $role, string $title, string $message, ?int $exceptUserId = null, ?string $waMessage = null): void
+    /**
+     * Mengirim notifikasi ke semua user yang memiliki role tertentu.
+     */
+    public function notifyRole(string $role, string $title, string $message, ?int $exceptUserId = null, string|callable|null $waMessage = null): void
     {
         User::where('role', $role)
             ->where('is_active', true)
             ->when($exceptUserId, fn ($query) => $query->where('id', '!=', $exceptUserId))
             ->get()
             ->each(function (User $user) use ($title, $message, $waMessage) {
-                $this->notifyUser($user->id, $title, $message, $waMessage);
+                $personalWaMessage = is_callable($waMessage) ? $waMessage($user) : $waMessage;
+
+                $this->notifyUser($user->id, $title, $message, $personalWaMessage);
             });
     }
 
+    /**
+     * Helper untuk mengubah nominal angka menjadi kata-kata (terbilang).
+     */
     private function numberToIndonesianWords(int $number): string
     {
         $number = abs($number);
@@ -273,7 +390,7 @@ class Rab extends Model
     }
 
     /**
-     * Recalculate total amount from items.
+     * Menghitung ulang total anggaran dari seluruh item terkait.
      */
     public function recalculateTotal(): void
     {
@@ -281,7 +398,8 @@ class Rab extends Model
             'operasional' => $this->operationalExpenseItems()->sum('total'),
             'petty_cash' => $this->pettyCashItems()->sum('total'),
             'gaji' => $this->salaryExpenseItems()->sum('total_salary'),
-            'bulanan' => $this->monthlyExpenseItems()->sum('total_payment'),
+            'bulanan', 'listrik', 'air_pam' => $this->monthlyExpenseItems()->sum('total_payment'),
+            'pnbp' => $this->pnbpExpenseItems()->sum('tarif_pnbp'),
             default => 0,
         };
 
@@ -289,7 +407,7 @@ class Rab extends Model
     }
 
     /**
-     * Generate next RAB number.
+     * Menghasilkan nomor RAB baru berdasarkan sequence, bulan, dan tahun.
      */
     public static function generateNumber(?string $month = null, ?string $year = null): string
     {
@@ -300,6 +418,9 @@ class Rab extends Model
         );
     }
 
+    /**
+     * Mencari urutan sequence berikutnya untuk nomor RAB.
+     */
     public static function nextSequence(): int
     {
         $rabs = static::withTrashed()->get(['rab_number']);
@@ -318,6 +439,9 @@ class Rab extends Model
         return $maxNumber + 1;
     }
 
+    /**
+     * Membangun string nomor RAB lengkap (contoh: 001/RAB/SBK/I/2026).
+     */
     public static function buildNumber(int $sequence, ?string $month = null, ?string $year = null): string
     {
         return str_pad($sequence, 3, '0', STR_PAD_LEFT)
@@ -327,6 +451,9 @@ class Rab extends Model
             . static::normalizeYear($year ?: now()->format('Y'));
     }
 
+    /**
+     * Memecah string nomor RAB menjadi komponen-komponennya (sequence, bulan romawi, tahun).
+     */
     public static function parseNumberParts(?string $rabNumber): array
     {
         $parts = explode('/', (string) $rabNumber);
@@ -338,6 +465,9 @@ class Rab extends Model
         ];
     }
 
+    /**
+     * Menormalisasi format bulan menjadi angka Romawi.
+     */
     public static function normalizeMonthToRoman(string|int|null $month): string
     {
         $month = strtoupper(trim((string) $month));
@@ -359,6 +489,9 @@ class Rab extends Model
         return $romanMonths[$month] ?? static::normalizeMonthToRoman(now()->format('m'));
     }
 
+    /**
+     * Menormalisasi format tahun agar selalu terdiri dari 4 digit angka.
+     */
     public static function normalizeYear(string|int|null $year): string
     {
         $year = preg_replace('/[^0-9]/', '', (string) $year);

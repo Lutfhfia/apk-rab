@@ -54,7 +54,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Redirect user based on their role.
+     * Mengarahkan pengguna berdasarkan role mereka.
      */
     protected function redirectByRole($user)
     {
@@ -62,7 +62,7 @@ class AuthController extends Controller
 
         return match ($role) {
             'admin_keuangan'    => redirect()->intended(route('admin.dashboard')),
-            'manajer_operasional'  => redirect()->intended(route('manajer.dashboard')),
+            'manajer_keuangan'  => redirect()->intended(route('manajer.dashboard')),
             'direktur'          => redirect()->intended(route('direktur.dashboard')),
             default             => redirect()->intended(route('admin.dashboard')),
         };
@@ -104,11 +104,20 @@ class AuthController extends Controller
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user, $password) {
-                $user->forceFill([
-                    'password' => $password
-                ])->setRememberToken(Str::random(60));
+                // Hash kata sandi sekali secara eksplisit, lalu simpan melalui query DB
+                // untuk menghindari cast 'hashed' pada model (yang akan melakukan double-hash)
+                $hashedPassword = Hash::make($password);
+                $rememberToken = Str::random(60);
 
-                $user->save();
+                \Illuminate\Support\Facades\DB::table('users')
+                    ->where('id', $user->id)
+                    ->update([
+                        'password' => $hashedPassword,
+                        'remember_token' => $rememberToken,
+                        'updated_at' => now(),
+                    ]);
+
+                $user->setRememberToken($rememberToken);
                 event(new PasswordReset($user));
             }
         );

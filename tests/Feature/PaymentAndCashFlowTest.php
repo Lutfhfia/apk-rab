@@ -9,6 +9,8 @@ use App\Models\ExpenseType;
 use App\Enums\UserRole;
 use App\Enums\RabStatus;
 use App\Enums\CashFlowType;
+use App\Enums\PaymentValidationStatus;
+use App\Models\RabPayment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -35,7 +37,7 @@ class PaymentAndCashFlowTest extends TestCase
         ]);
 
         $this->manajer = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
 
@@ -83,8 +85,8 @@ class PaymentAndCashFlowTest extends TestCase
 
         $this->assertDatabaseHas('cash_flows', [
             'type' => 'saldo_awal',
-            'debit' => 10000000,
-            'credit' => 0,
+            'debit' => 0,
+            'credit' => 10000000,
             'balance' => 10000000,
         ]);
     }
@@ -173,24 +175,13 @@ class PaymentAndCashFlowTest extends TestCase
 
     // ── Payment Upload ──
 
-    public function test_admin_can_upload_payment_for_approved_rab(): void
+    public function test_manager_can_create_payment_for_approved_rab(): void
     {
         $rab = $this->createApprovedRab();
 
-        // Ensure sufficient balance
-        CashFlow::create([
-            'transaction_date' => '2026-06-01',
-            'type' => 'saldo_awal',
-            'description' => 'Saldo awal',
-            'debit' => 10000000,
-            'credit' => 0,
-            'balance' => 10000000,
-            'created_by' => $this->manajer->id,
-        ]);
-
-        $response = $this->actingAs($this->admin)->post("/rab/{$rab->id}/payment", [
+        $response = $this->actingAs($this->manajer)->post("/rab/{$rab->id}/payment", [
             'payment_date' => '2026-06-03',
-            'paid_amount' => 500000,
+            'paid_amount' => '500.000',
             'payment_method' => 'transfer',
             'recipient_name' => 'PT Supplier',
             'recipient_account' => '1234567890',
@@ -201,37 +192,28 @@ class PaymentAndCashFlowTest extends TestCase
         $response->assertSessionHas('success');
 
         $rab->refresh();
-        $this->assertEquals(RabStatus::SELESAI, $rab->status);
-        $this->assertNotNull($rab->completed_at);
+        $this->assertEquals(RabStatus::DISETUJUI, $rab->status);
+        $this->assertNull($rab->completed_at);
 
         // Verify payment record
         $this->assertDatabaseHas('rab_payments', [
             'rab_id' => $rab->id,
-            'paid_by' => $this->admin->id,
+            'paid_by' => $this->manajer->id,
             'paid_amount' => 500000,
+            'validation_status' => PaymentValidationStatus::VALID->value,
+            'validated_by' => $this->manajer->id,
         ]);
 
-        // Verify cash flow deduction
-        $latestCf = CashFlow::latest('id')->first();
-        $this->assertEquals('dana_keluar', $latestCf->type->value);
-        $this->assertEquals(500000, (float) $latestCf->credit);
-        $this->assertEquals(9500000, (float) $latestCf->balance);
+        $this->assertDatabaseHas('cash_flows', [
+            'rab_id' => $rab->id,
+            'type' => CashFlowType::DANA_MASUK->value,
+            'credit' => 500000,
+        ]);
     }
 
-    public function test_payment_fails_when_balance_insufficient(): void
+    public function test_admin_cannot_create_payment(): void
     {
-        $rab = $this->createApprovedRab('002/RAB/SBK/VI/2026', 500000);
-
-        // Only 100k balance
-        CashFlow::create([
-            'transaction_date' => '2026-06-01',
-            'type' => 'saldo_awal',
-            'description' => 'Saldo awal',
-            'debit' => 100000,
-            'credit' => 0,
-            'balance' => 100000,
-            'created_by' => $this->manajer->id,
-        ]);
+        $rab = $this->createApprovedRab();
 
         $response = $this->actingAs($this->admin)->post("/rab/{$rab->id}/payment", [
             'payment_date' => '2026-06-03',
@@ -240,7 +222,7 @@ class PaymentAndCashFlowTest extends TestCase
             'proof_file' => UploadedFile::fake()->image('bukti.jpg', 100, 100)->size(50),
         ]);
 
-        $response->assertSessionHasErrors('paid_amount');
+        $response->assertStatus(403);
     }
 
     public function test_payment_fails_for_non_approved_rab(): void
@@ -257,9 +239,9 @@ class PaymentAndCashFlowTest extends TestCase
             'total_amount' => 500000,
         ]);
 
-        $response = $this->actingAs($this->admin)->post("/rab/{$rab->id}/payment", [
+        $response = $this->actingAs($this->manajer)->post("/rab/{$rab->id}/payment", [
             'payment_date' => '2026-06-03',
-            'paid_amount' => 500000,
+            'paid_amount' => '500.000',
             'payment_method' => 'transfer',
             'proof_file' => UploadedFile::fake()->image('bukti.jpg', 100, 100)->size(50),
         ]);

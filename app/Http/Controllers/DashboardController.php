@@ -5,15 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Rab;
 use App\Models\CashFlow;
 use App\Models\RabPayment;
-use App\Models\ExpenseType; //dipakai untuk mengisi dropdown Jenis Pengeluaran pada filter card
+use App\Models\RabReceipt;
+use App\Enums\RabReceiptStatus;
+use App\Models\ExpenseType;
 use App\Enums\RabStatus;
 use Illuminate\Http\Request;
-use Carbon\Carbon; //dipakai untuk mengatur filter bulan, tahun, serta periode 3, 6, 9, dan 12 bulan.
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
     /**
-     * Build common chart data used by all dashboards.
+     * Menyusun data grafik umum yang digunakan oleh seluruh halaman dashboard.
      */
     private function buildChartData(Request $request)
     {
@@ -26,40 +28,49 @@ class DashboardController extends Controller
         $statusPeriod = $request->input('status_period', '1');
         $categoryPeriod = $request->input('category_period', '1');
         $cashflowPeriod = $request->input('cashflow_period', '1');
-        $comparisonExpenseTypeId = $request->input('comparison_expense_type_id', $budgetExpenseTypeId);
+
+        $comparisonExpenseTypeId = $request->input('comparison_expense_type_id', null);
         $comparisonPeriod = (int) $request->input('comparison_period', 3);
         $comparisonPeriod = in_array($comparisonPeriod, [3, 6, 9, 12], true) ? $comparisonPeriod : 3;
 
-        // Backward-compatible aliases used by existing dashboard tables.
+        // Cek jika default (tidak diisi)
+        $isDefaultComparison = !$request->filled('comparison_expense_type_id') || $request->input('comparison_expense_type_id') === '';
+
         $expenseTypeId = $budgetExpenseTypeId;
         $period = $budgetPeriod;
 
         $startDate = Carbon::now()->subMonths($budgetPeriod - 1)->startOfMonth();
         $endDate = Carbon::now()->endOfDay();
 
-        $rabQuery = Rab::where('status', '!=', RabStatus::DRAFT)
-            ->whereBetween('request_date', [$startDate, $endDate]);
+        $baseRabQuery = Rab::whereBetween('request_date', [$startDate, $endDate]);
 
         if ($budgetExpenseTypeId) {
-            $rabQuery->where('expense_type_id', $budgetExpenseTypeId);
+            $baseRabQuery->where('expense_type_id', $budgetExpenseTypeId);
         }
 
-        $totalDiajukan = (clone $rabQuery)->count();
-        $totalDibayar = (clone $rabQuery)->where('status', RabStatus::SELESAI)->count();
-        $waitingApproval = (clone $rabQuery)->whereIn('status', [RabStatus::DIAJUKAN, RabStatus::DISETUJUI_MANAJER])->count();
-        $totalDitolak = (clone $rabQuery)->where('status', RabStatus::DITOLAK)->count();
+        $totalDiajukan = (clone $baseRabQuery)->count();
+        $totalDibayar = (clone $baseRabQuery)->where('status', RabStatus::SELESAI)->count();
 
+        $waitingApproval = Rab::whereIn('status', [RabStatus::DIAJUKAN, RabStatus::DISETUJUI_MANAJER])->count();
+        $totalDitolak = Rab::where('status', RabStatus::DITOLAK)->count();
+
+        $rabQuery = (clone $baseRabQuery)->where('status', RabStatus::SELESAI);
         $totalNilaiPengajuan = (clone $rabQuery)->sum('total_amount');
-        
-        $rabIds = (clone $rabQuery)->pluck('id');
-        $totalRealisasi = RabPayment::whereIn('rab_id', $rabIds)->sum('paid_amount');
 
-        // Chart 1: Tren Anggaran vs Realisasi (Line Chart)
+        $rabIds = (clone $rabQuery)->pluck('id');
+        $totalRealisasi = RabReceipt::whereIn('rab_id', $rabIds)->where('status', RabReceiptStatus::VALID)->sum('total_amount');
+
+        // Chart 1: Tren Anggaran vs Realisasi
         $chartLabels = [];
         $chartAnggaran = [];
         $chartRealisasi = [];
 
-        $rabsForChart = (clone $rabQuery)->with('payment')->orderBy('request_date')->get();
+        $rabsForChart = (clone $rabQuery)
+            ->with(['receipts' => function($q) {
+                $q->where('status', RabReceiptStatus::VALID);
+            }])
+            ->orderBy('request_date')
+            ->get();
         $groupedData = [];
 
         for ($date = $startDate->copy(); $date <= $endDate; $date->addMonth()) {
@@ -72,7 +83,7 @@ class DashboardController extends Controller
                 $groupedData[$key] = ['anggaran' => 0, 'realisasi' => 0];
             }
             $groupedData[$key]['anggaran'] += (float) $rab->total_amount;
-            $groupedData[$key]['realisasi'] += $rab->payment ? (float) $rab->payment->paid_amount : 0;
+            $groupedData[$key]['realisasi'] += (float) $rab->receipts->sum('total_amount');
         }
 
         foreach ($groupedData as $label => $data) {
@@ -81,8 +92,8 @@ class DashboardController extends Controller
             $chartRealisasi[] = $data['realisasi'];
         }
 
-        // Chart 2: Distribusi Status RAB (Donut Chart)
-        $statusQuery = Rab::where('status', '!=', RabStatus::DRAFT);
+        // Chart 2: Distribusi Status RAB
+        $statusQuery = Rab::where('status', RabStatus::SELESAI);
         if ($statusPeriod !== 'semua') {
             $sMonths = (int) $statusPeriod;
             $sStart = Carbon::now()->subMonths(max(0, $sMonths - 1))->startOfMonth();
@@ -90,24 +101,11 @@ class DashboardController extends Controller
         }
         $statusRabs = $statusQuery->get();
 
-        $statusLabels = ['Diajukan', 'Disetujui', 'Menunggu Approval', 'Ditolak/Revisi'];
-        $statusData = [0, 0, 0, 0];
-        
-        foreach ($statusRabs as $rab) {
-            $status = $rab->status->value;
-            if ($status === 'diajukan') {
-                $statusData[0]++;
-            } elseif (in_array($status, ['disetujui', 'disetujui_direktur', 'selesai'])) {
-                $statusData[1]++;
-            } elseif ($status === 'disetujui_manajer') {
-                $statusData[2]++;
-            } elseif ($status === 'ditolak') {
-                $statusData[3]++;
-            }
-        }
+        $statusLabels = ['Selesai'];
+        $statusData = [$statusRabs->count()];
 
-        // Chart 3: Pengeluaran Berdasarkan Kategori (Horizontal Bar)
-        $catQuery = Rab::where('status', '!=', RabStatus::DRAFT);
+        // Chart 3: Pengeluaran Berdasarkan Kategori
+        $catQuery = Rab::where('status', RabStatus::SELESAI);
         if ($categoryPeriod !== 'semua') {
             $cMonths = (int) $categoryPeriod;
             $cStart = Carbon::now()->subMonths(max(0, $cMonths - 1))->startOfMonth();
@@ -119,29 +117,32 @@ class DashboardController extends Controller
             ->selectRaw('expense_types.name as category_name, SUM(rabs.total_amount) as total')
             ->groupBy('expense_types.id', 'expense_types.name')
             ->get();
-            
+
         $categoryLabels = $categoryDataRaw->pluck('category_name')->toArray();
         $categoryData = $categoryDataRaw->pluck('total')->toArray();
 
-        // Chart 4: Perkembangan Arus Kas (Line/Bar Chart)
+        // Chart 4: Perkembangan Arus Kas
         $cfGrouped = [];
-        
+
         if ($cashflowPeriod === '1') {
             $cfStart = Carbon::now()->startOfMonth();
             $cfEnd = Carbon::now()->endOfMonth();
             $cashflowQuery = CashFlow::whereBetween('transaction_date', [$cfStart, $cfEnd])
+                ->where(function ($query) {
+                    $query->whereNull('rab_id')
+                        ->orWhereHas('rab', fn ($rabQuery) => $rabQuery->where('status', RabStatus::SELESAI));
+                })
                 ->orderBy('transaction_date')
                 ->get();
 
             for ($week = 1; $week <= 5; $week++) {
-                $cfGrouped['Minggu ' . $week] = ['in' => 0, 'out' => 0, 'balance' => 0];
+                $cfGrouped['Minggu ' . $week] = ['in' => 0, 'out' => 0];
             }
 
             foreach ($cashflowQuery as $cf) {
                 $key = 'Minggu ' . min((int) ceil(Carbon::parse($cf->transaction_date)->day / 7), 5);
                 $cfGrouped[$key]['in'] += (float) $cf->debit;
                 $cfGrouped[$key]['out'] += (float) $cf->credit;
-                $cfGrouped[$key]['balance'] = (float) $cf->balance;
             }
         } else {
             $cfMonths = (int) $cashflowPeriod;
@@ -149,11 +150,15 @@ class DashboardController extends Controller
             $cfEnd = Carbon::now()->endOfMonth();
 
             $cashflowQuery = CashFlow::whereBetween('transaction_date', [$cfStart, $cfEnd])
+                ->where(function ($query) {
+                    $query->whereNull('rab_id')
+                        ->orWhereHas('rab', fn ($rabQuery) => $rabQuery->where('status', RabStatus::SELESAI));
+                })
                 ->orderBy('transaction_date')
                 ->get();
 
             for ($date = $cfStart->copy(); $date <= $cfEnd; $date->addMonth()) {
-                $cfGrouped[$date->translatedFormat('M Y')] = ['in' => 0, 'out' => 0, 'balance' => 0];
+                $cfGrouped[$date->translatedFormat('M Y')] = ['in' => 0, 'out' => 0];
             }
 
             foreach ($cashflowQuery as $cf) {
@@ -161,7 +166,6 @@ class DashboardController extends Controller
                 if (isset($cfGrouped[$key])) {
                     $cfGrouped[$key]['in'] += (float) $cf->debit;
                     $cfGrouped[$key]['out'] += (float) $cf->credit;
-                    $cfGrouped[$key]['balance'] = (float) $cf->balance;
                 }
             }
         }
@@ -171,14 +175,26 @@ class DashboardController extends Controller
         $cfOut = [];
         $cfBalance = [];
 
+        $lastCfBeforePeriod = CashFlow::where('transaction_date', '<', $cfStart)
+            ->where(function ($query) {
+                $query->whereNull('rab_id')
+                    ->orWhereHas('rab', fn ($rabQuery) => $rabQuery->where('status', RabStatus::SELESAI));
+            })
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->first();
+
+        $runningCashBalance = $lastCfBeforePeriod ? (float) $lastCfBeforePeriod->balance : 0;
+
         foreach ($cfGrouped as $label => $data) {
+            $runningCashBalance += $data['in'] - $data['out'];
             $cfLabels[] = $label;
             $cfIn[] = $data['in'];
             $cfOut[] = $data['out'];
-            $cfBalance[] = $data['balance'];
+            $cfBalance[] = $runningCashBalance;
         }
 
-        // Chart 5: Pengeluaran bulanan dalam rentang 3, 6, 9, atau 12 bulan
+        // Chart 5: Perbandingan Pengeluaran per Periode
         $comparisonLabels = [];
         $periods = [];
         $comparisonStart = Carbon::now()->subMonths($comparisonPeriod - 1)->startOfMonth();
@@ -188,19 +204,32 @@ class DashboardController extends Controller
             $comparisonLabels[] = $date->translatedFormat('M Y');
         }
 
-        // Color mapping based on expense type code
+        // Pemetaan warna berdasarkan kode tipe pengeluaran (Warna sudah dibuat lebih kontras)
         $colorMap = [
-            'gaji' => '#3b82f6',        // Blue
-            'operasional' => '#8b5cf6', // Purple
-            'bulanan' => '#eab308',     // Amber
-            'petty_cash' => '#10b981',   // Emerald
+            'gaji'        => '#2563eb', // Blue 600 (Biru Tua)
+            'operasional' => '#9333ea', // Purple 600 (Ungu)
+            'bulanan'     => '#ea580c', // Orange 600 (Oranye Gelap)
+            'listrik'     => '#eab308', // Yellow 500 (Kuning)
+            'air_pam'     => '#06b6d4', // Cyan 500 (Biru Muda/Cyan)
+            'petty_cash'  => '#16a34a', // Green 600 (Hijau)
+            'pnbp'        => '#dc2626', // Red 600 (Merah)
         ];
-        $fallbackColors = ['#f97316', '#ec4899', '#14b8a6', '#6366f1', '#64748b'];
 
+        // Warna cadangan jika ada kategori baru di luar daftar di atas
+        $fallbackColors = [
+            '#ec4899', // Pink
+            '#14b8a6', // Teal
+            '#6366f1', // Indigo
+            '#84cc16', // Lime
+            '#f43f5e', // Rose
+            '#64748b', // Slate
+            '#d946ef', // Fuchsia
+        ];
         $comparisonDatasets = [];
         $comparisonTotalValues = array_fill_keys($periods, 0);
 
-        if ($comparisonExpenseTypeId) {
+        // MODIFIKASI LOGIKA: Cek apakah user memilih satu kategori spesifik (bukan 'semua')
+        if ($comparisonExpenseTypeId && $comparisonExpenseTypeId !== 'semua') {
             $selectedType = $expenseTypes->firstWhere('id', (int) $comparisonExpenseTypeId);
             $selectedCode = $selectedType ? $selectedType->code : 'other';
             $selectedName = $selectedType ? $selectedType->name : 'Pengeluaran';
@@ -211,7 +240,7 @@ class DashboardController extends Controller
                 $dataValues[$periodKey] = 0;
             }
 
-            $comparisonQuery = Rab::where('status', '!=', RabStatus::DRAFT)
+            $comparisonQuery = Rab::where('status', RabStatus::SELESAI)
                 ->whereBetween('request_date', [$comparisonStart, $endDate])
                 ->where('expense_type_id', $comparisonExpenseTypeId);
 
@@ -231,8 +260,15 @@ class DashboardController extends Controller
                 'borderRadius' => 5
             ];
         } else {
+            // MODIFIKASI LOGIKA: Jika 'semua', gunakan seluruh jenis pengeluaran, jika default (empty) hanya air & listrik
             $idx = 0;
-            foreach ($expenseTypes as $type) {
+            $isAllCategories = ($comparisonExpenseTypeId === 'semua');
+
+            $comparisonTypes = $isAllCategories
+                ? $expenseTypes
+                : $expenseTypes->whereIn('code', ['air_pam', 'listrik'])->values();
+
+            foreach ($comparisonTypes as $type) {
                 $typeCode = $type->code;
                 $typeName = $type->name;
                 $typeColor = $colorMap[$typeCode] ?? ($fallbackColors[$idx % count($fallbackColors)]);
@@ -243,7 +279,7 @@ class DashboardController extends Controller
                     $dataValues[$periodKey] = 0;
                 }
 
-                $comparisonQuery = Rab::where('status', '!=', RabStatus::DRAFT)
+                $comparisonQuery = Rab::where('status', RabStatus::SELESAI)
                     ->whereBetween('request_date', [$comparisonStart, $endDate])
                     ->where('expense_type_id', $type->id);
 
@@ -267,7 +303,7 @@ class DashboardController extends Controller
 
         $comparisonDatasets[] = [
             'type' => 'line',
-            'label' => $comparisonExpenseTypeId ? 'Tren Pengeluaran' : 'Tren Total Pengeluaran',
+            'label' => $comparisonExpenseTypeId === 'semua' ? 'Tren Semua Kategori' : (($isDefaultComparison) ? 'Tren Air & Listrik' : 'Tren Pengeluaran'),
             'data' => array_values($comparisonTotalValues),
             'borderColor' => '#111827',
             'backgroundColor' => '#111827',
@@ -284,13 +320,11 @@ class DashboardController extends Controller
             ->get();
 
         $topSpenders = (clone $rabQuery)
-            ->where('status', '!=', RabStatus::DITOLAK)
             ->with(['user', 'expenseType', 'payment'])
             ->orderByDesc('total_amount')
             ->take(5)
             ->get();
 
-        // RAB Menunggu per role
         $rabMenungguManajer = Rab::with(['user', 'expenseType'])
             ->where('status', RabStatus::DIAJUKAN)
             ->latest()
@@ -303,7 +337,6 @@ class DashboardController extends Controller
             ->take(10)
             ->get();
 
-        // Count specific role approvals
         $waitingManajer = Rab::where('status', RabStatus::DIAJUKAN)->count();
         $waitingDirektur = Rab::where('status', RabStatus::DISETUJUI_MANAJER)->count();
 
@@ -359,10 +392,10 @@ class DashboardController extends Controller
                 'data' => $data['categoryData'],
             ],
             'cashflow' => [
-                'labels' => auth()->user()?->isAdmin() ? [] : $data['cfLabels'],
-                'in' => auth()->user()?->isAdmin() ? [] : $data['cfIn'],
-                'out' => auth()->user()?->isAdmin() ? [] : $data['cfOut'],
-                'balance' => auth()->user()?->isAdmin() ? [] : $data['cfBalance'],
+                'labels' => $data['cfLabels'],
+                'in' => $data['cfIn'],
+                'out' => $data['cfOut'],
+                'balance' => $data['cfBalance'],
             ],
             'comparison' => [
                 'labels' => $data['comparisonLabels'],
@@ -371,23 +404,16 @@ class DashboardController extends Controller
         ]);
     }
 
-    /**
-     * Admin Keuangan Dashboard.
-     */
     public function admin(Request $request)
     {
         $data = $this->buildChartData($request);
         return view('admin.dashboard', $data);
     }
 
-    /**
-     * Manajer Operasional Dashboard.
-     */
     public function manajer(Request $request)
     {
         $data = $this->buildChartData($request);
 
-        // Override role-specific variables
         $data['rabMenunggu'] = $data['rabMenungguManajer'];
         $data['roleWaiting'] = $data['waitingManajer'];
         $data['roleDisetujui'] = $data['totalDisetujuiManajer'];
@@ -397,14 +423,10 @@ class DashboardController extends Controller
         return view('manajer.dashboard', $data);
     }
 
-    /**
-     * Direktur Dashboard.
-     */
     public function direktur(Request $request)
     {
         $data = $this->buildChartData($request);
 
-        // Override role-specific variables
         $data['rabMenunggu'] = $data['rabMenungguDirektur'];
         $data['roleWaiting'] = $data['waitingDirektur'];
         $data['roleDisetujui'] = $data['totalDisetujuiDirektur'];

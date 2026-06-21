@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('report_exports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('exported_by')->constrained('users')->cascadeOnDelete();
@@ -25,6 +26,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('report_exports');
     }
 };

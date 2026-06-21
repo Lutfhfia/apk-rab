@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('cash_flows', function (Blueprint $table) {
             $table->id();
             $table->foreignId('rab_id')->nullable()->constrained('rabs')->nullOnDelete();
@@ -25,6 +26,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('cash_flows');
     }
 };

@@ -3,7 +3,11 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const chartDataUrl = @json(route('dashboard.chart-data'));
-        const currencyFormat = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(val || 0));
+        const currencyFormat = (val) => new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            maximumFractionDigits: 0
+        }).format(Number(val || 0));
         const shortFormat = (val) => {
             val = Number(val || 0);
             if (val >= 1000000000) return 'Rp ' + (val / 1000000000).toFixed(1) + 'M';
@@ -20,7 +24,9 @@
         const pieLabelsLinePlugin = {
             id: 'pieLabelsLine',
             afterDraw(chart) {
-                const { ctx } = chart;
+                const {
+                    ctx
+                } = chart;
                 ctx.save();
                 chart.data.datasets.forEach((dataset, datasetIndex) => {
                     const meta = chart.getDatasetMeta(datasetIndex);
@@ -28,11 +34,18 @@
 
                     meta.data.forEach((element, index) => {
                         const model = element;
-                        const { x, y, startAngle, endAngle, outerRadius } = model;
+                        const {
+                            x,
+                            y,
+                            startAngle,
+                            endAngle,
+                            outerRadius
+                        } = model;
                         const value = dataset.data[index];
-                        
+
                         // Calculate percentage
-                        const total = dataset.data.reduce((sum, val) => sum + (val || 0), 0);
+                        const total = dataset.data.reduce((sum, val) => sum + (val || 0),
+                        0);
                         if (total === 0 || !value || value === 0) return;
                         const percentage = ((value / total) * 100).toFixed(1) + '%';
                         const label = chart.data.labels[index];
@@ -47,7 +60,7 @@
                         const startY = y + sin * outerRadius;
 
                         // Control point/inflection point of the line
-                        const lineLength = 22; 
+                        const lineLength = 22;
                         const infX = x + cos * (outerRadius + lineLength);
                         const infY = y + sin * (outerRadius + lineLength);
 
@@ -75,10 +88,11 @@
                         ctx.font = "bold 12px 'Inter', sans-serif";
                         ctx.fillStyle = "#1e293b"; // Slate 800
                         ctx.textAlign = isLeft ? 'right' : 'left';
-                        
+
                         // Label (above line)
-                        ctx.fillText(`${label} (${value})`, endX + (isLeft ? -5 : 5), endY - 4);
-                        
+                        ctx.fillText(`${label} (${value})`, endX + (isLeft ? -5 : 5), endY -
+                            4);
+
                         // Percentage (below line)
                         ctx.font = "normal 11px 'Inter', sans-serif";
                         ctx.fillStyle = "#64748b"; // Slate 500
@@ -89,6 +103,75 @@
             }
         };
 
+        const budgetChart = new Chart(document.getElementById('budgetChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($chartLabels) !!},
+                datasets: [{
+                        type: 'bar',
+                        label: 'Anggaran Diajukan',
+                        data: {!! json_encode($chartAnggaran) !!},
+                        backgroundColor: 'rgba(59, 130, 246, 0.75)',
+                        borderRadius: 5,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Realisasi Anggaran',
+                        data: {!! json_encode($chartRealisasi) !!},
+                        borderColor: '#10b981',
+                        backgroundColor: '#10b981',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f3f4f6'
+                        },
+                        ticks: {
+                            callback: shortFormat
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         const statusChart = new Chart(document.getElementById('statusChart').getContext('2d'), {
             type: 'doughnut',
             plugins: [pieLabelsLinePlugin],
@@ -96,7 +179,7 @@
                 labels: {!! json_encode($statusLabels) !!},
                 datasets: [{
                     data: {!! json_encode($statusData) !!},
-                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+                    backgroundColor: ['#10b981'],
                     borderWidth: 0
                 }]
             },
@@ -112,7 +195,9 @@
                     }
                 },
                 plugins: {
-                    legend: { display: false }
+                    legend: {
+                        display: false
+                    }
                 }
             }
         });
@@ -122,8 +207,7 @@
             type: 'line',
             data: {
                 labels: {!! json_encode($cfLabels) !!},
-                datasets: [
-                    {
+                datasets: [{
                         type: 'line',
                         label: 'Uang Masuk',
                         data: {!! json_encode($cfIn) !!},
@@ -160,12 +244,37 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } },
-                    tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}` } }
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            font: {
+                                size: 10
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}`
+                        }
+                    }
                 },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { callback: shortFormat } },
-                    x: { grid: { display: false } }
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f3f4f6'
+                        },
+                        ticks: {
+                            callback: shortFormat
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
                 }
             }
         }) : null;
@@ -183,25 +292,100 @@
                     legend: {
                         display: true,
                         position: 'bottom',
-                        labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } }
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            font: {
+                                size: 10
+                            }
+                        }
                     },
-                    tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}` } }
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}`
+                        }
+                    }
                 },
                 scales: {
-                    y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { callback: shortFormat } },
-                    x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f3f4f6'
+                        },
+                        ticks: {
+                            callback: shortFormat
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
                 }
             }
         });
+
+        // FIX PERBAIKAN: Inisialisasi Grafik Batang Kategori Pengeluaran (Horizontal Bar Chart)
+        const categoryCanvas = document.getElementById('categoryChart');
+        const categoryChart = categoryCanvas ? new Chart(categoryCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode($categoryLabels ?? []) !!},
+                datasets: [{
+                    label: 'Total Anggaran',
+                    data: {!! json_encode($categoryData ?? []) !!},
+                    backgroundColor: 'rgba(139, 92, 246, 0.75)', // Warna Ungu/Indigo kemiripan tema dashboard
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Mengubah chart bar vertikal menjadi horizontal
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }, // Tidak perlu legend karena hanya ada 1 dataset tunggal
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${currencyFormat(ctx.raw)}`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            color: '#f3f4f6'
+                        },
+                        ticks: {
+                            callback: shortFormat
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        }
+                    }
+                }
+            }
+        }) : null;
 
         const setChartData = (chart, labels, datasets) => {
             chart.data.labels = labels || [];
             datasets.forEach((data, index) => {
                 chart.data.datasets[index].data = data || [];
             });
-            if (chart === cashflowChart) {
-                // Not doing maxWithPadding for cashflow because it's a mixed chart
-            }
             chart.update();
         };
 
@@ -221,7 +405,10 @@
                 try {
                     const params = new URLSearchParams(new FormData(form));
                     const response = await fetch(`${chartDataUrl}?${params.toString()}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
                     });
 
                     if (!response.ok) throw new Error('Gagal memuat data chart.');
@@ -229,17 +416,31 @@
                     const payload = await response.json();
 
                     if (target === 'status') {
-                        setChartData(statusChart, payload.status.labels, [payload.status.data]);
+                        setChartData(statusChart, payload.status.labels, [payload.status
+                            .data
+                        ]);
                     }
 
                     if (target === 'cashflow' && cashflowChart) {
-                        setChartData(cashflowChart, payload.cashflow.labels, [payload.cashflow.balance, payload.cashflow.in, payload.cashflow.out]);
+                        setChartData(cashflowChart, payload.cashflow.labels, [payload
+                            .cashflow.in, payload.cashflow.out, payload.cashflow
+                            .balance
+                        ]);
                     }
+
                     if (target === 'comparison') {
                         comparisonChart.data.labels = payload.comparison.labels || [];
                         comparisonChart.data.datasets = payload.comparison.datasets || [];
                         comparisonChart.update();
                     }
+
+                    // FIX PERBAIKAN: Penanganan AJAX Refresh untuk chart kategori pengeluaran ketika difilter
+                    if (target === 'category' && categoryChart) {
+                        setChartData(categoryChart, payload.category.labels, [payload
+                            .category.data
+                        ]);
+                    }
+
                 } catch (error) {
                     console.error(error);
                     alert('Data chart belum bisa dimuat. Silakan coba lagi.');

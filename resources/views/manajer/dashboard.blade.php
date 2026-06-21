@@ -1,6 +1,6 @@
 @extends('layouts.app')
-@section('title', 'Dashboard Manajer Operasional')
-@section('page-title', 'Dashboard Manajer Operasional')
+@section('title', 'Dashboard Manajer Keuangan')
+@section('page-title', 'Dashboard Manajer Keuangan')
 @section('page-subtitle', 'Approval dan monitoring anggaran')
 
 @section('sidebar-menu')

@@ -32,26 +32,41 @@ class CashFlow extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB terkait dengan arus kas ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);
     }
 
+    /**
+     * Relasi ke model RabPayment (Pembayaran terkait dengan arus kas ini).
+     */
     public function payment()
     {
         return $this->belongsTo(RabPayment::class, 'payment_id');
     }
 
+    /**
+     * Relasi ke model User (Pengguna yang mencatat arus kas).
+     */
     public function createdBy()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Mendapatkan path file bukti transaksi arus kas.
+     */
     public function proofFilePath(): ?string
     {
         return $this->proof_file_path ?: $this->payment?->proof_file_path;
     }
 
+    /**
+     * Memeriksa apakah file bukti transaksi tersedia di storage public.
+     */
     public function proofFileExists(): bool
     {
         $proofPath = $this->proofFilePath();

@@ -25,18 +25,24 @@ class AuditLog extends Model
         ];
     }
 
+    /**
+     * Relasi ke model User (Pengguna yang melakukan aksi).
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Relasi ke model Rab (RAB terkait dengan aktivitas).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);
     }
 
     /**
-     * Create an audit log entry.
+     * Membuat entri log audit / aktivitas baru.
      */
     public static function log(
         string $action,

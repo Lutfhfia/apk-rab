@@ -17,6 +17,7 @@ class SalaryExpenseItem extends Model
         'meal_allowance_daily',
         'transport_daily',
         'overtime',
+        'deduction',
         'total_salary',
         'salary_nominal',
         'notes',
@@ -31,21 +32,25 @@ class SalaryExpenseItem extends Model
             'meal_allowance_daily' => 'decimal:2',
             'transport_daily' => 'decimal:2',
             'overtime' => 'decimal:2',
+            'deduction' => 'decimal:2',
             'total_salary' => 'decimal:2',
             'salary_nominal' => 'decimal:2',
         ];
     }
 
     /**
-     * Calculate total salary from components.
+     * Menghitung total gaji dari seluruh komponen (gaji pokok, uang makan, transport, lembur, dikurangi potongan).
      */
     public function calculateTotal(): float
     {
         $mealTotal = $this->attendance_days * $this->meal_allowance_daily;
         $transportTotal = $this->attendance_days * $this->transport_daily;
-        return $this->base_salary + $mealTotal + $transportTotal + $this->overtime;
+        return $this->base_salary + $mealTotal + $transportTotal + $this->overtime - $this->deduction;
     }
 
+    /**
+     * Relasi ke model Rab (RAB pemilik item pengeluaran gaji ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);

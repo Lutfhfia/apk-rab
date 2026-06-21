@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Menjalankan migrasi database
         Schema::create('rabs', function (Blueprint $table) {
             $table->id();
             $table->string('rab_number')->unique();
@@ -38,6 +39,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        // Membatalkan migrasi database (mengembalikan perubahan)
         Schema::dropIfExists('rabs');
     }
 };

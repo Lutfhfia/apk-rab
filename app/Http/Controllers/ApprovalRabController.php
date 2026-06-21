@@ -14,18 +14,10 @@ use Illuminate\Support\Facades\DB;
 class ApprovalRabController extends Controller
 {
     /**
-     * Approve RAB by Manajer Operasional.
+     * Menyetujui RAB oleh Manajer Keuangan.
      */
     public function approveByManager(Request $request, Rab $rab)
     {
-        if ($rab->status === RabStatus::DISETUJUI_MANAJER || $rab->status === RabStatus::DISETUJUI) {
-            return back()->with('info', 'RAB ini sudah disetujui sebelumnya.');
-        }
-
-        if ($rab->status !== RabStatus::DIAJUKAN) {
-            return back()->with('error', 'RAB ini tidak dalam status yang dapat disetujui.');
-        }
-
         $request->validate([
             'notes' => 'nullable|string|max:1000',
         ]);
@@ -33,15 +25,36 @@ class ApprovalRabController extends Controller
         DB::beginTransaction();
 
         try {
+            // Mengunci baris data RAB di database untuk mencegah race condition (tumburan data)
+            $rab = Rab::where('id', $rab->id)->lockForUpdate()->first();
+
+            if ($rab->status === RabStatus::DISETUJUI_MANAJER || $rab->status === RabStatus::DISETUJUI) {
+                DB::rollBack();
+                return back()->with('info', 'RAB ini sudah disetujui sebelumnya.');
+            }
+
+            if ($rab->status !== RabStatus::DIAJUKAN) {
+                DB::rollBack();
+                return back()->with('error', 'RAB ini tidak dalam status yang dapat disetujui.');
+            }
+
             RabApproval::create([
                 'rab_id' => $rab->id,
                 'user_id' => auth()->id(),
-                'role' => 'manajer_operasional',
+                'role' => 'manajer_keuangan',
                 'approval_level' => 'manager',
                 'status' => ApprovalStatus::APPROVED,
                 'notes' => $request->notes,
                 'approved_at' => now(),
             ]);
+
+            if ($request->filled('notes')) {
+                \App\Models\RabDiscussion::create([
+                    'rab_id' => $rab->id,
+                    'user_id' => auth()->id(),
+                    'message' => $request->notes,
+                ]);
+            }
 
             $rab->update([
                 'status' => RabStatus::DISETUJUI_MANAJER,
@@ -50,7 +63,7 @@ class ApprovalRabController extends Controller
 
             AuditLog::log(
                 'approve_manager',
-                "RAB {$rab->rab_number} disetujui oleh Manajer Operasional " . auth()->user()->name,
+                "RAB {$rab->rab_number} disetujui oleh Manajer Keuangan " . auth()->user()->name,
                 rabId: $rab->id
             );
 
@@ -59,9 +72,9 @@ class ApprovalRabController extends Controller
             $rab->notifyRole(
                 UserRole::DIREKTUR->value,
                 'RAB perlu diperiksa Direktur',
-                "Manager Operasional menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur.",
+                "Manajer Keuangan menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur.",
                 null,
-                "*RAB Baru Perlu Diperiksa*\n\nManager Operasional telah menyetujui RAB *{$rab->rab_number}* dan meneruskannya kepada Anda untuk persetujuan akhir.\nSilakan cek aplikasi untuk menindaklanjuti:\n" . route('direktur.rab.show', $rab)
+                fn ($direktur) => $rab->buildWhatsAppSubmissionMessage(route('direktur.rab.show', $rab), $direktur)
             );
 
             DB::commit();
@@ -75,18 +88,10 @@ class ApprovalRabController extends Controller
     }
 
     /**
-     * Approve RAB by Direktur.
+     * Menyetujui RAB oleh Direktur.
      */
     public function approveByDirector(Request $request, Rab $rab)
     {
-        if ($rab->status === RabStatus::DISETUJUI) {
-            return back()->with('info', 'RAB ini sudah disetujui sebelumnya.');
-        }
-
-        if ($rab->status !== RabStatus::DISETUJUI_MANAJER) {
-            return back()->with('error', 'RAB ini belum disetujui oleh Manajer Operasional.');
-        }
-
         $request->validate([
             'notes' => 'nullable|string|max:1000',
         ]);
@@ -94,6 +99,19 @@ class ApprovalRabController extends Controller
         DB::beginTransaction();
 
         try {
+            // Mengunci baris data RAB di database untuk mencegah race condition (tumburan data)
+            $rab = Rab::where('id', $rab->id)->lockForUpdate()->first();
+
+            if ($rab->status === RabStatus::DISETUJUI) {
+                DB::rollBack();
+                return back()->with('info', 'RAB ini sudah disetujui sebelumnya.');
+            }
+
+            if ($rab->status !== RabStatus::DISETUJUI_MANAJER) {
+                DB::rollBack();
+                return back()->with('error', 'RAB ini belum disetujui oleh Manajer Keuangan.');
+            }
+
             RabApproval::create([
                 'rab_id' => $rab->id,
                 'user_id' => auth()->id(),
@@ -103,6 +121,14 @@ class ApprovalRabController extends Controller
                 'notes' => $request->notes,
                 'approved_at' => now(),
             ]);
+
+            if ($request->filled('notes')) {
+                \App\Models\RabDiscussion::create([
+                    'rab_id' => $rab->id,
+                    'user_id' => auth()->id(),
+                    'message' => $request->notes,
+                ]);
+            }
 
             $rab->update([
                 'status' => RabStatus::DISETUJUI,
@@ -134,14 +160,10 @@ class ApprovalRabController extends Controller
     }
 
     /**
-     * Reject RAB.
+     * Menolak RAB dan mengembalikannya ke Admin.
      */
     public function reject(Request $request, Rab $rab)
     {
-        if (!in_array($rab->status, [RabStatus::DIAJUKAN, RabStatus::DISETUJUI_MANAJER])) {
-            return back()->with('error', 'RAB ini tidak dalam status yang dapat ditolak.');
-        }
-
         $request->validate([
             'notes' => 'required|string|max:1000',
         ], [
@@ -153,15 +175,31 @@ class ApprovalRabController extends Controller
         DB::beginTransaction();
 
         try {
+            // Mengunci baris data RAB di database untuk mencegah race condition (tumburan data)
+            $rab = Rab::where('id', $rab->id)->lockForUpdate()->first();
+
+            if (!in_array($rab->status, [RabStatus::DIAJUKAN, RabStatus::DISETUJUI_MANAJER])) {
+                DB::rollBack();
+                return back()->with('error', 'RAB ini tidak dalam status yang dapat ditolak.');
+            }
+
             RabApproval::create([
                 'rab_id' => $rab->id,
                 'user_id' => auth()->id(),
                 'role' => $userRole,
-                'approval_level' => $userRole === 'manajer_operasional' ? 'manager' : 'director',
+                'approval_level' => $userRole === 'manajer_keuangan' ? 'manager' : 'director',
                 'status' => ApprovalStatus::REJECTED,
                 'notes' => $request->notes,
                 'rejected_at' => now(),
             ]);
+
+            if ($request->filled('notes')) {
+                \App\Models\RabDiscussion::create([
+                    'rab_id' => $rab->id,
+                    'user_id' => auth()->id(),
+                    'message' => $request->notes,
+                ]);
+            }
 
             $rab->update([
                 'status' => RabStatus::DITOLAK,

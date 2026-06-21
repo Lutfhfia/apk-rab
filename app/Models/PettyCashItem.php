@@ -32,6 +32,9 @@ class PettyCashItem extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB pemilik item pengeluaran kas kecil ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);

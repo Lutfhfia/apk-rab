@@ -195,6 +195,12 @@
                             <a href="{{ route('rab.export-pdf', $rab) }}" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition" title="Simpan PDF RAB">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             </a>
+                            {{-- Cairkan Dana shortcut --}}
+                            @if($rab->status === \App\Enums\RabStatus::DISETUJUI && !$rab->payment)
+                            <button type="button" onclick="openPaymentModal('paymentModal-{{ $rab->id }}')" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition" title="Cairkan Dana">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                            </button>
+                            @endif
                             @endif
 
                         </div>
@@ -418,7 +424,7 @@
                 @elseif($rab->expenseType?->code === 'gaji')
                 {{-- SALARY TABLE --}}
                 <div class="overflow-x-auto p-4">
-                    <table class="w-full text-sm text-left min-w-[1200px]">
+                    <table class="w-full text-sm text-left min-w-[1300px]">
                         <thead>
                             <tr class="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
                                 <th class="py-3 px-4 font-bold text-center w-12">No</th>
@@ -430,6 +436,7 @@
                                 <th class="py-3 px-4 font-bold text-right w-28">Uang Makan/Hari</th>
                                 <th class="py-3 px-4 font-bold text-right w-28">Transport/Hari</th>
                                 <th class="py-3 px-4 font-bold text-right w-28">Lembur</th>
+                                <th class="py-3 px-4 font-bold text-right w-28">Potongan</th>
                                 <th class="py-3 px-4 font-bold text-right w-32">Total Gaji</th>
                                 <th class="py-3 px-4 font-bold">Catatan</th>
                             </tr>
@@ -447,19 +454,20 @@
                                 <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->meal_allowance_daily, 0, ',', '.') }}</td>
                                 <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->transport_daily, 0, ',', '.') }}</td>
                                 <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->overtime, 0, ',', '.') }}</td>
+                                <td class="py-3 px-4 text-right text-red-500">Rp {{ number_format($item->deduction ?? 0, 0, ',', '.') }}</td>
                                 <td class="py-3 px-4 text-right font-bold text-gray-800">Rp {{ number_format($totalVal, 0, ',', '.') }}</td>
                                 <td class="py-3 px-4 text-gray-600">{{ $item->notes ?? '-' }}</td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="11" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
+                                <td colspan="12" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
                             </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                @elseif($rab->expenseType?->code === 'bulanan')
+                @elseif(in_array($rab->expenseType?->code, ['bulanan', 'listrik', 'air_pam'], true))
                 {{-- MONTHLY TABLE --}}
                 <div class="overflow-x-auto p-4">
                     <table class="w-full text-sm text-left min-w-[900px]">
@@ -500,6 +508,39 @@
                     </table>
                 </div>
 
+                @elseif($rab->expenseType?->code === 'pnbp')
+                {{-- PNBP TABLE --}}
+                <div class="overflow-x-auto p-4">
+                    <table class="w-full text-sm text-left min-w-[900px]">
+                        <thead>
+                            <tr class="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
+                                <th class="py-3 px-4 font-bold text-center w-12">No</th>
+                                <th class="py-3 px-4 font-bold">Nama & No. Agenda</th>
+                                <th class="py-3 px-4 font-bold">Jenis Level</th>
+                                <th class="py-3 px-4 font-bold text-right w-48">Tarif PNBP</th>
+                                <th class="py-3 px-4 font-bold">Nama Perusahaan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($rab->getExpenseItems() as $i => $item)
+                            <tr class="border-b border-gray-50">
+                                <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
+                                <td class="py-3 px-4 font-semibold text-gray-800">
+                                    <div>{{ $item->item_name }}</div>
+                                    <div class="text-xs text-gray-400 font-normal mt-0.5">No. Agenda: {{ $item->agenda_number }}</div>
+                                </td>
+                                <td class="py-3 px-4 text-gray-600">Level {{ $item->level }}</td>
+                                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp {{ number_format($item->tarif_pnbp, 0, ',', '.') }}</td>
+                                <td class="py-3 px-4 text-gray-600">{{ $item->company_name }}</td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
                 @else
                 <div class="p-8 text-center text-gray-400">
                     <p>Tidak ada rincian item untuk jenis pengeluaran ini.</p>
@@ -535,21 +576,27 @@
             @if($rab->payment)
             <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
                 <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800">Informasi Pembayaran</h4>
+                    <h4 class="text-sm font-bold text-gray-800">Informasi Pencairan Dana</h4>
                 </div>
                 <div class="p-4">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Tanggal Bayar</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_date->format('d/m/Y') }}</p></div>
+                        <div><p class="text-xs font-bold text-gray-400 uppercase">Tanggal Transfer</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_date->format('d/m/Y') }}</p></div>
                         <div><p class="text-xs font-bold text-gray-400 uppercase">Nominal</p><p class="text-sm font-semibold mt-1 text-emerald-600">Rp {{ number_format($rab->payment->paid_amount, 0, ',', '.') }}</p></div>
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Metode</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_method }}</p></div>
+                        <div><p class="text-xs font-bold text-gray-400 uppercase">Metode Transfer</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_method }}</p></div>
                         @if($rab->payment->proof_file_path)
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Bukti Bayar</p>
-                            <button type="button" onclick="openRabProofModal(@js(route('file.show', ['path' => $rab->payment->proof_file_path], false)), 'Bukti Bayar {{ $rab->rab_number }}')" class="text-sm font-bold text-blue-600 hover:underline mt-1 inline-block">Lihat Lampiran</button>
+                        <div><p class="text-xs font-bold text-gray-400 uppercase">Bukti Transfer</p>
+                            <button type="button" onclick="openRabProofModal(@js(route('file.show', ['path' => $rab->payment->proof_file_path], false)), 'Bukti Transfer {{ $rab->rab_number }}')" class="text-sm font-bold text-blue-600 hover:underline mt-1 inline-block">Lihat Lampiran</button>
                         </div>
                         @endif
                     </div>
+                    @include('payments._validation_status', ['payment' => $rab->payment])
                 </div>
             </div>
+            @endif
+
+            {{-- Nota Belanja / LPJ Section --}}
+            @if(in_array($rab->status, [\App\Enums\RabStatus::DISETUJUI, \App\Enums\RabStatus::SELESAI]) || $rab->receipts->isNotEmpty())
+                @include('rab._receipts_section')
             @endif
 
             {{-- Discussion Notes --}}
@@ -627,14 +674,33 @@
                     </form>
                 </div>
                 @else
+                {{-- Cairkan Dana button for Manajer when RAB is approved but not yet paid --}}
+                @if($role === 'manajer' && $rab->status === \App\Enums\RabStatus::DISETUJUI && !$rab->payment)
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="flex-1 sm:flex-none bg-gray-100 text-gray-600 px-8 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition">
+                        Tutup
+                    </button>
+                    <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}'); openPaymentModal('paymentModal-{{ $rab->id }}')" class="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg shadow-emerald-200 flex items-center justify-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Cairkan Dana
+                    </button>
+                </div>
+                @else
                 <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="bg-gray-100 text-gray-600 px-8 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition">
                     Tutup
                 </button>
+                @endif
                 @endif
             </div>
         </div>
     </div>
 </div>
+
+{{-- Include Pencairan Dana Modal for Manajer --}}
+@if($role === 'manajer' && $rab->status === \App\Enums\RabStatus::DISETUJUI && !$rab->payment)
+    @include('payments._create_modal')
+@endif
+
 @endforeach
 
 {{-- ============================================================ --}}
@@ -730,7 +796,7 @@
         const modal = document.getElementById('rabProofModal');
         const frame = document.getElementById('rabProofFrame');
         const image = document.getElementById('rabProofImage');
-        document.getElementById('rabProofTitle').innerText = title || 'Bukti Bayar';
+        document.getElementById('rabProofTitle').innerText = title || 'Bukti Transfer';
         document.getElementById('rabProofOpenLink').href = url + '?download=1';
 
         frame.classList.add('hidden');
@@ -786,6 +852,11 @@
         });
         closeRejectModal();
         closeRabProofModal();
+        // Also close payment modals on Escape
+        document.querySelectorAll('[id^="paymentModal-"]').forEach(function(m) {
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        });
         document.body.classList.remove('overflow-hidden');
     });
 
@@ -824,5 +895,22 @@
             sortInput.closest('form').submit();
         }
     };
+
+    // ── Payment Modal (Cairkan Dana) ──
+    function openPaymentModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+    }
+
+    function closePaymentModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+    }
 </script>
 @endpush

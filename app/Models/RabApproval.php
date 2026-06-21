@@ -27,11 +27,17 @@ class RabApproval extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB yang disetujui / ditolak).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);
     }
 
+    /**
+     * Relasi ke model User (Pihak manajer/direktur yang memberikan persetujuan).
+     */
     public function user()
     {
         return $this->belongsTo(User::class);

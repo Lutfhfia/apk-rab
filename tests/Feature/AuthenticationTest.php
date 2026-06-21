@@ -48,7 +48,7 @@ class AuthenticationTest extends TestCase
     public function test_manajer_can_login_and_redirects_to_manajer_dashboard(): void
     {
         $user = User::factory()->create([
-            'role' => UserRole::MANAJER_OPERASIONAL,
+            'role' => UserRole::MANAJER_KEUANGAN,
             'is_active' => true,
         ]);
 

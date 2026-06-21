@@ -29,6 +29,9 @@ class ReportExport extends Model
         ];
     }
 
+    /**
+     * Relasi ke model User (Pengguna yang melakukan ekspor laporan).
+     */
     public function exportedBy()
     {
         return $this->belongsTo(User::class, 'exported_by');

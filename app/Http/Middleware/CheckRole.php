@@ -10,7 +10,7 @@ class CheckRole
 {
     /**
      * Handle an incoming request.
-     * Usage: CheckRole::class . ':admin_keuangan,manajer_operasional'
+     * Usage: CheckRole::class . ':admin_keuangan,manajer_keuangan'
      */
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
@@ -18,7 +18,14 @@ class CheckRole
             return redirect()->route('login');
         }
 
-        $userRole = auth()->user()->role->value ?? auth()->user()->role;
+        $user = auth()->user();
+        $userRole = $user->role instanceof \App\Enums\UserRole
+            ? $user->role->normalizedValue()
+            : $user->getRawOriginal('role');
+
+        if ($userRole === 'manajer_operasional') {
+            $userRole = 'manajer_keuangan';
+        }
 
         if (!in_array($userRole, $roles)) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');

@@ -101,9 +101,17 @@
 @endphp
 <div class="flex gap-2 overflow-x-auto pb-2 mb-6">
     @foreach($statusTabs as $statusTab)
+    @php
+        $tabCount = $statusCounts[$statusTab->value] ?? 0;
+        if ($statusTab->value === \App\Enums\RabStatus::DISETUJUI->value) {
+            $tabCount += ($statusCounts[\App\Enums\RabStatus::DISETUJUI_DIREKTUR->value] ?? 0);
+        }
+        $isActive = $activeStatus === $statusTab->value;
+    @endphp
     <a href="{{ route('rab.index', array_merge(request()->except('page'), ['status' => $statusTab->value])) }}"
-       class="shrink-0 px-4 py-2 rounded-xl text-sm font-bold border transition {{ $activeStatus === $statusTab->value ? $statusTab->badgeClasses() . ' border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
+       class="shrink-0 px-4 py-2 rounded-xl text-sm font-bold border transition flex items-center gap-2 {{ $isActive ? $statusTab->badgeClasses() . ' border-transparent' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50' }}">
         {{ $statusTab->label() }}
+        <span class="text-[10px] {{ $isActive ? 'opacity-75' : 'bg-gray-100 text-gray-500' }} px-1.5 py-0.5 rounded-full font-bold">{{ $tabCount }}</span>
     </a>
     @endforeach
 </div>
@@ -183,13 +191,10 @@
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                 </button>
 
-                            {{-- DISETUJUI: Detail, Upload Bukti --}}
+                            {{-- DISETUJUI: Detail only (Admin menunggu pencairan dari Manajer) --}}
                             @elseif($rab->status === \App\Enums\RabStatus::DISETUJUI)
                                 <button type="button" onclick="openRabModal('rabDetailModal-{{ $rab->id }}')" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition" title="Detail">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                </button>
-                                <button type="button" onclick="openPaymentModal('paymentModal-{{ $rab->id }}')" class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition" title="Upload Bukti Bayar">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                                 </button>
 
                             {{-- DITOLAK: Edit, Detail, Hapus --}}
@@ -231,423 +236,10 @@
 
 {{-- Modal Detail RAB dari halaman daftar --}}
 @foreach($rabs as $rab)
-<div id="rabDetailModal-{{ $rab->id }}" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[90vh] flex flex-col overflow-hidden">
-
-        {{-- HEADER --}}
-        <div class="p-5 border-b border-gray-100 flex items-start justify-between gap-4 shrink-0">
-            <div>
-                <div class="flex items-center gap-3 mb-1">
-                    <h3 class="text-lg font-extrabold text-gray-800">{{ $rab->rab_number }}</h3>
-                    <span class="{{ $rab->status->badgeClasses() }} text-[10px] font-bold px-3 py-1.5 rounded-lg">{{ $rab->status->label() }}</span>
-                </div>
-                <p class="text-sm text-gray-500">{{ $rab->expenseType->name ?? '-' }} &bull; {{ $rab->request_date->format('d/m/Y') }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">Dibuat oleh: {{ $rab->user->name ?? 'User' }} pada {{ $rab->created_at->format('d M Y, H:i') }}</p>
-            </div>
-            <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="h-9 w-9 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition flex-shrink-0" aria-label="Tutup">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-
-        {{-- BODY (scrollable) --}}
-        <div class="p-5 flex-1 overflow-y-auto min-h-0">
-
-            {{-- Info Cards --}}
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Pembuat</p>
-                    <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->user->name ?? '-' }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Periode</p>
-                    <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->period_label }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <p class="text-xs font-bold text-gray-400 uppercase">Jenis Pengeluaran</p>
-                    <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->expenseType?->name ?? '-' }}</p>
-                </div>
-                <div class="bg-emerald-50 rounded-xl p-4">
-                    <p class="text-xs font-bold text-emerald-600 uppercase">Total</p>
-                    <p class="text-lg font-extrabold text-emerald-700 mt-1">Rp {{ number_format($rab->total_amount, 0, ',', '.') }}</p>
-                </div>
-            </div>
-
-            {{-- Description --}}
-            @if($rab->description)
-            <div class="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-5">
-                <p class="text-xs font-bold text-gray-400 uppercase mb-1">Catatan / Alasan Pengajuan</p>
-                <p class="text-sm text-gray-700 italic leading-relaxed">{{ $rab->description }}</p>
-            </div>
-            @endif
-
-            {{-- Rejection Alert --}}
-            @if($rab->status === \App\Enums\RabStatus::DITOLAK)
-                @php
-                    $latestRejection = $rab->approvals->where('status', \App\Enums\ApprovalStatus::REJECTED)->sortByDesc('created_at')->first();
-                @endphp
-                @if($latestRejection)
-                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
-                    <div class="flex items-start">
-                        <svg class="w-5 h-5 text-red-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <div>
-                            <h4 class="text-sm font-bold text-red-800">RAB Ditolak oleh {{ $latestRejection->user->name ?? 'Sistem' }}</h4>
-                            <p class="text-sm text-red-700 mt-1">Alasan: {{ $latestRejection->notes }}</p>
-                            <p class="text-xs text-red-500 mt-1">{{ $latestRejection->created_at->format('d M Y, H:i') }}</p>
-                        </div>
-                    </div>
-                </div>
-                @endif
-            @endif
-            {{-- ============================================= --}}
-            {{-- Tabel Rincian Item (per Jenis Pengeluaran) --}}
-            {{-- ============================================= --}}
-            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800 flex items-center">
-                        <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        Rincian Item RAB
-                    </h4>
-                </div>
-
-                @if($rab->expenseType?->code === 'operasional')
-                {{-- OPERASIONAL TABLE --}}
-                <div class="overflow-x-auto p-4">
-                    <table class="w-full text-sm text-left min-w-[900px]">
-                        <thead>
-                            <tr class="text-xs text-gray-500 border-b-2 border-gray-200">
-                                <th class="py-2 px-2 font-bold w-12 text-center">NO</th>
-                                <th class="py-2 px-2 font-bold">ITEM</th>
-                                <th class="py-2 px-2 font-bold w-20 text-center">VOLUME</th>
-                                <th class="py-2 px-2 font-bold w-20 text-center">SATUAN</th>
-                                <th class="py-2 px-2 font-bold w-32 text-right">RP / UNIT</th>
-                                <th class="py-2 px-2 font-bold w-32 text-right">JUMLAH</th>
-                                <th class="py-2 px-2 font-bold w-48">KET</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php
-                                $operationalGroups = [
-                                    "Honor Pencari Peserta",
-                                    "Uang Transport / Honor Peserta Uji Serkom",
-                                    "Operasional Pembekalan",
-                                    "Operasional Uji Serkom",
-                                    "Honor Asesor"
-                                ];
-                                $items = $rab->getExpenseItems();
-                                $totalRAB = 0;
-                                $otherItems = $items->filter(function($item) use ($operationalGroups) {
-                                    return !in_array($item->group_name, $operationalGroups);
-                                });
-                            @endphp
-                            @foreach($operationalGroups as $gIdx => $groupName)
-                                @php $groupItems = $items->where('group_name', $groupName); @endphp
-                                @if($groupItems->count() > 0)
-                                <tr class="bg-blue-50/50">
-                                    <td class="py-2 px-2 font-bold text-gray-800 text-center">{{ $gIdx + 1 }}.</td>
-                                    <td colspan="6" class="py-2 px-2 font-bold text-gray-800 uppercase">{{ $groupName }}</td>
-                                </tr>
-                                @foreach($groupItems as $item)
-                                    @php $totalRAB += $item->total; @endphp
-                                    <tr class="border-b border-gray-100">
-                                        <td></td>
-                                        <td class="py-2 px-2 text-gray-700">{{ $item->item_name }}</td>
-                                        <td class="py-2 px-2 text-center text-gray-600">{{ $item->volume }}</td>
-                                        <td class="py-2 px-2 text-center text-gray-600">{{ $item->unit }}</td>
-                                        <td class="py-2 px-2 text-right text-gray-600">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                        <td class="py-2 px-2 font-bold text-gray-800 text-right">Rp {{ number_format($item->total, 0, ',', '.') }}</td>
-                                        <td class="py-2 px-2 text-gray-500">{{ $item->note ?? '-' }}</td>
-                                    </tr>
-                                @endforeach
-                                @endif
-                            @endforeach
-                            @if($otherItems->count() > 0)
-                                <tr class="bg-gray-100/70">
-                                    <td class="py-2 px-2 font-bold text-gray-800 text-center">*</td>
-                                    <td colspan="6" class="py-2 px-2 font-bold text-gray-800 uppercase">Item Operasional (Umum)</td>
-                                </tr>
-                                @foreach($otherItems as $item)
-                                    @php $totalRAB += $item->total; @endphp
-                                    <tr class="border-b border-gray-100">
-                                        <td></td>
-                                        <td class="py-2 px-2 text-gray-700">{{ $item->item_name }}</td>
-                                        <td class="py-2 px-2 text-center text-gray-600">{{ $item->volume }}</td>
-                                        <td class="py-2 px-2 text-center text-gray-600">{{ $item->unit }}</td>
-                                        <td class="py-2 px-2 text-right text-gray-600">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                        <td class="py-2 px-2 font-bold text-gray-800 text-right">Rp {{ number_format($item->total, 0, ',', '.') }}</td>
-                                        <td class="py-2 px-2 text-gray-500">{{ $item->note ?? '-' }}</td>
-                                    </tr>
-                                @endforeach
-                            @endif
-                        </tbody>
-                        <tfoot>
-                            <tr class="bg-gray-50 border-t-2 border-gray-200">
-                                <td colspan="5" class="py-3 px-2 font-extrabold text-gray-800 text-right">TOTAL KESELURUHAN</td>
-                                <td class="py-3 px-2 font-extrabold text-emerald-600 text-right text-base">Rp {{ number_format($totalRAB, 0, ',', '.') }}</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-
-                @elseif($rab->expenseType?->code === 'petty_cash')
-                {{-- PETTY CASH TABLE --}}
-                <div class="overflow-x-auto p-4">
-                    <table class="w-full text-sm text-left min-w-[1000px]">
-                        <thead>
-                            <tr class="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
-                                <th class="py-3 px-4 font-bold text-center w-12">No</th>
-                                <th class="py-3 px-4 font-bold">Nama Pengeluaran</th>
-                                <th class="py-3 px-4 font-bold">Keterangan</th>
-                                <th class="py-3 px-4 font-bold text-center w-20">Jumlah</th>
-                                <th class="py-3 px-4 font-bold text-center w-20">Satuan</th>
-                                <th class="py-3 px-4 font-bold text-right w-32">Harga Satuan</th>
-                                <th class="py-3 px-4 font-bold text-right w-28">Admin</th>
-                                <th class="py-3 px-4 font-bold text-right w-32">Total</th>
-                                <th class="py-3 px-4 font-bold text-center w-32">Tanggal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($rab->getExpenseItems() as $i => $item)
-                            @php $totalVal = $item->total > 0 ? $item->total : $item->nominal; @endphp
-                            <tr class="border-b border-gray-50">
-                                <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
-                                <td class="py-3 px-4 font-semibold text-gray-800">{{ $item->expense_name }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->description ?? '-' }}</td>
-                                <td class="py-3 px-4 text-gray-600 text-center">{{ $item->volume }}</td>
-                                <td class="py-3 px-4 text-gray-600 text-center">{{ $item->unit }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->admin_fee, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp {{ number_format($totalVal, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-gray-500 text-center">{{ $item->transaction_date ? $item->transaction_date->format('d/m/Y') : '-' }}</td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="9" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @elseif($rab->expenseType?->code === 'gaji')
-                {{-- SALARY TABLE --}}
-                <div class="overflow-x-auto p-4">
-                    <table class="w-full text-sm text-left min-w-[1200px]">
-                        <thead>
-                            <tr class="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
-                                <th class="py-3 px-4 font-bold text-center w-12">No</th>
-                                <th class="py-3 px-4 font-bold">Nama Karyawan</th>
-                                <th class="py-3 px-4 font-bold">Jabatan</th>
-                                <th class="py-3 px-4 font-bold">No. Rek</th>
-                                <th class="py-3 px-4 font-bold text-center w-24">Hadir (hari)</th>
-                                <th class="py-3 px-4 font-bold text-right w-32">Gaji Pokok</th>
-                                <th class="py-3 px-4 font-bold text-right w-28">Uang Makan/Hari</th>
-                                <th class="py-3 px-4 font-bold text-right w-28">Transport/Hari</th>
-                                <th class="py-3 px-4 font-bold text-right w-28">Lembur</th>
-                                <th class="py-3 px-4 font-bold text-right w-32">Total Gaji</th>
-                                <th class="py-3 px-4 font-bold">Catatan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($rab->getExpenseItems() as $i => $item)
-                            @php $totalVal = $item->total_salary > 0 ? $item->total_salary : $item->salary_nominal; @endphp
-                            <tr class="border-b border-gray-50">
-                                <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
-                                <td class="py-3 px-4 font-semibold text-gray-800">{{ $item->employee_name }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->position ?? '-' }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->bank_account_number ?? '-' }}</td>
-                                <td class="py-3 px-4 text-gray-600 text-center">{{ $item->attendance_days }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->base_salary, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->meal_allowance_daily, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->transport_daily, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->overtime, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp {{ number_format($totalVal, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->notes ?? '-' }}</td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="11" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @elseif($rab->expenseType?->code === 'bulanan')
-                {{-- MONTHLY TABLE --}}
-                <div class="overflow-x-auto p-4">
-                    <table class="w-full text-sm text-left min-w-[900px]">
-                        <thead>
-                            <tr class="text-xs text-gray-500 bg-gray-50 border-b border-gray-200">
-                                <th class="py-3 px-4 font-bold text-center w-12">No</th>
-                                <th class="py-3 px-4 font-bold">Keterangan</th>
-                                <th class="py-3 px-4 font-bold">No. Regist/ID</th>
-                                <th class="py-3 px-4 font-bold">Atas Nama</th>
-                                <th class="py-3 px-4 font-bold text-right w-36">Total Pengeluaran</th>
-                                <th class="py-3 px-4 font-bold text-right w-28">Biaya Admin</th>
-                                <th class="py-3 px-4 font-bold text-right w-32">Subtotal</th>
-                                <th class="py-3 px-4 font-bold text-center w-32">Tanggal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($rab->getExpenseItems() as $i => $item)
-                            @php
-                                $totalExpense = $item->total_expense > 0 ? $item->total_expense : $item->bill_nominal;
-                                $totalPayment = $item->total_payment > 0 ? $item->total_payment : $item->total_expense;
-                            @endphp
-                            <tr class="border-b border-gray-50">
-                                <td class="py-3 px-4 text-gray-500 text-center">{{ $i + 1 }}</td>
-                                <td class="py-3 px-4 font-semibold text-gray-800">{{ $item->payment_name }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->registration_number ?? '-' }}</td>
-                                <td class="py-3 px-4 text-gray-600">{{ $item->account_name ?? '-' }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($totalExpense, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right text-gray-600">Rp {{ number_format($item->admin_fee, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-right font-bold text-gray-800">Rp {{ number_format($totalPayment, 0, ',', '.') }}</td>
-                                <td class="py-3 px-4 text-gray-500 text-center">{{ $item->transaction_date ? $item->transaction_date->format('d/m/Y') : '-' }}</td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="8" class="py-8 text-center text-gray-400">Belum ada rincian item.</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                @endif
-            </div>
-
-            {{-- Approval History --}}
-            @if($rab->approvals->count() > 0)
-            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800">Riwayat Approval</h4>
-                </div>
-                <div class="p-4 space-y-3">
-                    @foreach($rab->approvals as $approval)
-                    <div class="flex items-start p-3 rounded-lg {{ $approval->status === \App\Enums\ApprovalStatus::APPROVED ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100' }}">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold {{ $approval->status === \App\Enums\ApprovalStatus::APPROVED ? 'text-emerald-700' : 'text-red-700' }}">
-                                {{ $approval->status->label() }} oleh {{ $approval->user->name }}
-                            </p>
-                            <p class="text-xs text-gray-500 mt-1">{{ $approval->user ? $approval->user->role->label() : (\App\Enums\UserRole::tryFrom($approval->role)?->label() ?? $approval->role) }} &bull; {{ $approval->created_at->format('d/m/Y H:i') }}</p>
-                            @if($approval->notes)
-                            <p class="text-sm text-gray-600 mt-2 italic">"{{ $approval->notes }}"</p>
-                            @endif
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            {{-- Edit History --}}
-            @if($rab->auditLogs->count() > 0)
-            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800">Riwayat Pengeditan</h4>
-                </div>
-                <div class="p-4 space-y-3">
-                    @foreach($rab->auditLogs->sortByDesc('created_at') as $log)
-                    <div class="rounded-lg bg-slate-50 border border-slate-100 p-3">
-                        <p class="text-sm font-bold text-slate-700">{{ str_replace('_', ' ', strtoupper($log->action)) }}</p>
-                        <p class="text-sm text-gray-600 mt-1">{{ $log->description }}</p>
-                        <p class="text-xs text-gray-400 mt-1">{{ $log->user->name ?? '-' }} &bull; {{ $log->created_at->format('d/m/Y H:i') }}</p>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-            @endif
-
-            {{-- Payment Info --}}
-            @if($rab->payment)
-            <div class="border border-gray-100 rounded-xl overflow-hidden mb-5">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                    <h4 class="text-sm font-bold text-gray-800">Informasi Pembayaran</h4>
-                </div>
-                <div class="p-4">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Tanggal Bayar</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_date->format('d/m/Y') }}</p></div>
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Nominal</p><p class="text-sm font-semibold mt-1 text-emerald-600">Rp {{ number_format($rab->payment->paid_amount, 0, ',', '.') }}</p></div>
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Metode</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_method }}</p></div>
-                        @if($rab->payment->proof_file_path)
-                        <div><p class="text-xs font-bold text-gray-400 uppercase">Bukti Bayar</p>
-                            <button type="button" onclick="openRabProofModal(@js(route('file.show', ['path' => $rab->payment->proof_file_path], false)), 'Bukti Bayar {{ $rab->rab_number }}')" class="text-sm font-bold text-blue-600 hover:underline mt-1 inline-block">Lihat Lampiran</button>
-                        </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-            @endif
-
-            {{-- Catatan Diskusi --}}
-            <div class="border border-gray-100 rounded-xl overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                    <h4 class="text-sm font-bold text-gray-800">Catatan Diskusi ({{ $rab->discussions->count() }})</h4>
-                </div>
-                <div class="p-4 space-y-4">
-                    @forelse($rab->discussions->sortBy('created_at') as $discussion)
-                    <div class="flex gap-3">
-                        @if($discussion->user && $discussion->user->avatar)
-                        <div class="avatar-clickable">
-                        <img src="{{ asset('storage/' . $discussion->user->avatar) }}" alt="{{ $discussion->user->name }}" class="w-8 h-8 rounded-full object-cover border border-gray-200 flex-shrink-0">
-                        </div>
-                        @else
-                        <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
-                            {{ strtoupper(substr($discussion->user->name ?? 'U', 0, 1)) }}
-                        </div>
-                        @endif
-                        <div class="flex-1 bg-gray-50 rounded-xl px-4 py-3 border border-gray-100">
-                            <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <p class="text-sm font-bold text-gray-800">{{ $discussion->user->name ?? '-' }}</p>
-                                <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase">{{ $discussion->user->role->label() ?? '-' }}</span>
-                                <span class="text-xs text-gray-400">{{ $discussion->created_at->format('d/m/Y H:i') }}</span>
-                            </div>
-                            <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ $discussion->message }}</p>
-                        </div>
-                    </div>
-                    @empty
-                    <div class="text-center text-sm text-gray-400 py-4">Belum ada catatan diskusi.</div>
-                    @endforelse
-                </div>
-                <form method="POST" action="{{ route('rab.discussions.store', $rab) }}" class="p-4 border-t border-gray-100 bg-gray-50">
-                    @csrf
-                    <div class="flex gap-2">
-                        <textarea name="message" rows="1" required class="flex-1 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none resize-none" placeholder="Ketik catatan..."></textarea>
-                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition whitespace-nowrap">Kirim</button>
-                    </div>
-                </form>
-            </div>
-
-        </div>
-
-        {{-- FOOTER (Admin Action Buttons) --}}
-        <div class="p-5 border-t border-gray-100 bg-white shrink-0">
-            <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                {{-- Download PDF --}}
-                <a href="{{ route('rab.export-pdf', $rab) }}" target="_blank" class="text-red-600 hover:text-red-800 font-bold text-sm flex items-center transition bg-red-50 hover:bg-red-100 px-4 py-2.5 rounded-xl">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                    Simpan / Cetak PDF
-                </a>
-
-                <button type="button" onclick="closeRabModal('rabDetailModal-{{ $rab->id }}')" class="w-full sm:w-auto bg-gray-100 text-gray-600 px-8 py-2.5 rounded-xl font-bold hover:bg-gray-200 transition text-center">
-                    Tutup
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Sertakan Modal Edit RAB (Hanya untuk yang bisa diedit) --}}
-@if($rab->status === \App\Enums\RabStatus::DRAFT || $rab->status === \App\Enums\RabStatus::DITOLAK || $rab->status === \App\Enums\RabStatus::DIAJUKAN)
-    @include('rab._edit_modal')
-@endif
-
-{{-- Sertakan Modal Upload Bukti (Hanya untuk yang disetujui) --}}
-@if($rab->status === \App\Enums\RabStatus::DISETUJUI)
-    @include('payments._create_modal')
-@endif
-
+    @include('rab._detail_modal')
 @endforeach
+
+{{-- Payment modal dihapus: Pencairan dana dilakukan oleh Manajer di list-approver --}}
 
 {{-- Modal Bukti Bayar --}}
 <div id="rabProofModal" class="fixed inset-0 bg-black/60 z-[60] hidden items-center justify-center p-4">
@@ -685,10 +277,15 @@
         <p class="text-lg font-extrabold text-emerald-600 mb-6">Rp {{ number_format(session('submitted_rab_total'), 0, ',', '.') }}</p>
 
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            @if(session('submitted_rab_wa_url'))
+            <a href="{{ session('submitted_rab_wa_url') }}" target="_blank" class="inline-flex items-center justify-center bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl text-sm font-bold transition shadow-lg shadow-green-200 gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                Kirim ke WhatsApp
+            </a>
+            @endif
             <button onclick="document.getElementById('submitSuccessModal').style.display='none'" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-xl text-sm font-bold transition">
                 Kembali ke Daftar RAB
             </button>
-
         </div>
     </div>
 </div>

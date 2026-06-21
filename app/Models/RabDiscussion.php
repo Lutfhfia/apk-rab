@@ -12,11 +12,17 @@ class RabDiscussion extends Model
         'message',
     ];
 
+    /**
+     * Relasi ke model Rab (RAB tempat diskusi ini dilakukan).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);
     }
 
+    /**
+     * Relasi ke model User (Pengguna yang mengirim pesan diskusi).
+     */
     public function user()
     {
         return $this->belongsTo(User::class);

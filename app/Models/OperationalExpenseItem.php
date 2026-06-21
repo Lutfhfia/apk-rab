@@ -27,6 +27,9 @@ class OperationalExpenseItem extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (RAB pemilik item pengeluaran operasional ini).
+     */
     public function rab()
     {
         return $this->belongsTo(Rab::class);

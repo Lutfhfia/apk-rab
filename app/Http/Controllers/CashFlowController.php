@@ -12,12 +12,16 @@ use Illuminate\Support\Facades\DB;
 
 class CashFlowController extends Controller
 {
+    /**
+     * Menampilkan daftar arus kas dengan filter dan pagination.
+     */
     public function index(Request $request)
     {
         abort_if(auth()->user()?->isAdmin(), 403, 'Admin Keuangan tidak memiliki akses ke arus kas.');
 
         $query = CashFlow::with(['rab', 'payment', 'createdBy']);
 
+        // Menerapkan filter berdasarkan tipe dan tanggal
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
@@ -42,10 +46,14 @@ class CashFlowController extends Controller
         return view('cash-flows.index', compact('cashFlows', 'totalDebit', 'totalCredit', 'currentBalance', 'approvedRabs'));
     }
 
+    /**
+     * Menyimpan transaksi arus kas baru (dana masuk/dana keluar).
+     */
     public function store(Request $request)
     {
-        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Operasional yang dapat mencatat dana masuk.');
+        abort_unless(auth()->user()?->isManajer(), 403, 'Hanya Manajer Keuangan yang dapat mencatat dana masuk.');
 
+        // Menormalisasi nilai uang dari format input rupiah ke float desimal database
         $request->merge([
             'amount' => $this->normalizeMoney($request->amount),
         ]);
@@ -61,13 +69,14 @@ class CashFlowController extends Controller
 
         $lastBalance = CashFlow::latest('id')->value('balance') ?? 0;
 
+        // Validasi ketersediaan saldo untuk penarikan/dana keluar
         if ($request->type === 'dana_keluar' && $request->amount > $lastBalance) {
             return back()->withInput()->withErrors(['amount' => 'Saldo tidak mencukupi untuk transaksi dana keluar ini. Saldo tersedia: Rp ' . number_format($lastBalance, 0, ',', '.')]);
         }
 
-        $debit = in_array($request->type, ['saldo_awal', 'dana_masuk']) ? $request->amount : 0;
-        $credit = $request->type === 'dana_keluar' ? $request->amount : 0;
-        $newBalance = $lastBalance + $debit - $credit;
+        $credit = in_array($request->type, ['saldo_awal', 'dana_masuk']) ? $request->amount : 0;
+        $debit = $request->type === 'dana_keluar' ? $request->amount : 0;
+        $newBalance = $lastBalance + $credit - $debit;
 
         $proofPath = null;
         if ($request->hasFile('proof_file')) {
@@ -89,6 +98,7 @@ class CashFlowController extends Controller
                 'created_by' => auth()->id(),
             ]);
 
+            // Jika dana keluar untuk RAB, ubah status RAB menjadi Selesai
             if ($request->type === 'dana_keluar' && $request->rab_id) {
                 $rab = Rab::find($request->rab_id);
                 if ($rab && $rab->status === RabStatus::DISETUJUI) {
@@ -107,6 +117,9 @@ class CashFlowController extends Controller
         }
     }
 
+    /**
+     * Menghapus format ribuan (titik) dan mengganti koma desimal menjadi titik desimal.
+     */
     private function normalizeMoney($value): string
     {
         return str_replace(',', '.', str_replace('.', '', (string) $value));

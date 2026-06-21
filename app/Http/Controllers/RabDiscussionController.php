@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 
 class RabDiscussionController extends Controller
 {
+    /**
+     * Menyimpan catatan diskusi/komentar baru untuk suatu RAB.
+     */
     public function store(Request $request, Rab $rab)
     {
         $request->validate([

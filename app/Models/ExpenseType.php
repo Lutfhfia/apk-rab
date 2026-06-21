@@ -23,6 +23,9 @@ class ExpenseType extends Model
         ];
     }
 
+    /**
+     * Relasi ke model Rab (Daftar RAB yang bertipe pengeluaran ini).
+     */
     public function rabs()
     {
         return $this->hasMany(Rab::class);

@@ -45,7 +45,7 @@ const configs = {
     },
     gaji: {
         title: 'Rincian Biaya Gaji',
-        headers: ['No','Nama','Jabatan','No. Rek','Hadir (hari)','Gaji Pokok','Uang Makan/Hari','Transport/Hari','Lembur','Total Gaji','Catatan','Aksi'],
+        headers: ['No','Nama','Jabatan','No. Rek','Hadir (hari)','Gaji Pokok','Uang Makan/Hari','Transport/Hari','Lembur','Potongan','Total Gaji','Catatan','Aksi'],
         row: (i) => `
             <td class="py-3 px-3 text-center text-sm text-gray-500">${i}</td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][employee_name]" required class="${ic}" placeholder="Nama"></td>
@@ -56,6 +56,7 @@ const configs = {
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][meal_allowance_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][transport_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="20.000" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][overtime]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][deduction]" class="w-28 ${nc} calc-trigger money-input text-red-500" placeholder="0" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3 font-bold text-gray-800 row-total">Rp 0</td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][notes]" class="${ic}" placeholder="Catatan"></td>
             <td class="py-3 px-3">${delBtn}</td>`,
@@ -65,7 +66,8 @@ const configs = {
             const meal = parseMoney(row.querySelector('[name*="meal_allowance_daily"]')?.value);
             const transport = parseMoney(row.querySelector('[name*="transport_daily"]')?.value);
             const overtime = parseMoney(row.querySelector('[name*="overtime"]')?.value);
-            return base + (days * meal) + (days * transport) + overtime;
+            const deduction = parseMoney(row.querySelector('[name*="deduction"]')?.value);
+            return base + (days * meal) + (days * transport) + overtime - deduction;
         }
     },
     bulanan: {
@@ -86,7 +88,51 @@ const configs = {
             const admin = parseMoney(row.querySelector('[name*="admin_fee"]')?.value);
             return expense + admin;
         }
+    },
+    pnbp: {
+        title: 'Rincian Pembayaran PNBP',
+        headers: ['No','Nama & No. Agenda','Jenis Level','Tarif PNBP','Nama Perusahaan','Aksi'],
+        row: (i) => `
+            <td class="py-3 px-3 text-center text-sm text-gray-500">${i}</td>
+            <td class="py-3 px-3">
+                <div class="flex flex-col space-y-1">
+                    <input type="text" name="items[${i-1}][item_name]" required class="${ic}" placeholder="Nama">
+                    <input type="text" name="items[${i-1}][agenda_number]" required class="${ic} agenda-number-input" placeholder="No. Agenda" list="agendaSuggestions" oninput="updateAgendaSuggestions()">
+                </div>
+            </td>
+            <td class="py-3 px-3">
+                <select name="items[${i-1}][level]" required class="${sc} level-select" onchange="updatePnbpTarif(this)">
+                    <option value="">-- Pilih Level --</option>
+                    <option value="1">Level 1</option>
+                    <option value="2">Level 2</option>
+                    <option value="3">Level 3</option>
+                    <option value="4">Level 4</option>
+                </select>
+            </td>
+            <td class="py-3 px-3">
+                <input type="text" name="items[${i-1}][tarif_pnbp]" readonly class="${nc} money-input pnbp-tarif-input" placeholder="0">
+            </td>
+            <td class="py-3 px-3">
+                <input type="text" name="items[${i-1}][company_name]" required class="${ic}" placeholder="Nama Perusahaan">
+            </td>
+            <td class="py-3 px-3">${delBtn}</td>`,
+        calcRow: (row) => {
+            return parseMoney(row.querySelector('[name*="tarif_pnbp"]')?.value);
+        }
     }
+};
+
+configs.listrik = {
+    title: 'Rincian Biaya Listrik',
+    headers: configs.bulanan.headers,
+    row: configs.bulanan.row,
+    calcRow: configs.bulanan.calcRow
+};
+configs.air_pam = {
+    title: 'Rincian Biaya Air PAM',
+    headers: configs.bulanan.headers,
+    row: configs.bulanan.row,
+    calcRow: configs.bulanan.calcRow
 };
 
 // ── Money formatting helpers ──
@@ -98,6 +144,21 @@ function formatMoney(el) {
 function parseMoney(val) {
     if (!val) return 0;
     return parseFloat(String(val).replace(/\./g, '').replace(/,/g, '.')) || 0;
+}
+function updatePnbpTarif(select) {
+    const row = select.closest('tr');
+    const level = select.value;
+    const tarifInput = row.querySelector('.pnbp-tarif-input');
+    if (tarifInput) {
+        if (level === '1' || level === '2' || level === '3') {
+            tarifInput.value = '300.000';
+        } else if (level === '4') {
+            tarifInput.value = '525.000';
+        } else {
+            tarifInput.value = '';
+        }
+        calculateRow(row);
+    }
 }
 
 function normalizeRabMonth(value) {
@@ -210,9 +271,11 @@ expenseTypeSelect?.addEventListener('change', function() {
             if (code === 'petty_cash') {
                 table.classList.add('min-w-[1000px]');
             } else if (code === 'gaji') {
-                table.classList.add('min-w-[1200px]');
-            } else if (code === 'bulanan') {
+                table.classList.add('min-w-[1300px]');
+            } else if (code === 'bulanan' || code === 'listrik' || code === 'air_pam') {
                 table.classList.add('min-w-[900px]');
+            } else if (code === 'pnbp') {
+                table.classList.add('min-w-[1000px]');
             }
         }
 
@@ -236,6 +299,14 @@ function addRow() {
     tr.querySelectorAll('.calc-trigger').forEach(input => {
         input.addEventListener('input', () => calculateRow(tr));
     });
+
+    // Auto-scroll to the newly added row
+    setTimeout(() => {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Focus the first input of the new row
+        const firstInput = tr.querySelector('input[type="text"], select');
+        if (firstInput) firstInput.focus();
+    }, 100);
 }
 
 function removeRow(btn) {
@@ -380,6 +451,13 @@ function addOperationalRow(gIdx) {
     tr.querySelectorAll('.op-calc').forEach(input => {
         input.addEventListener('input', () => calcOperationalGroup(gIdx));
     });
+
+    // Auto-scroll to the newly added row
+    setTimeout(() => {
+        tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const firstInput = tr.querySelector('input[type="text"]');
+        if (firstInput) firstInput.focus();
+    }, 100);
 }
 
 function removeOperationalRow(btn, gIdx) {
@@ -449,6 +527,26 @@ function closeCreateRabModal() {
     modal.classList.add('hidden');
     modal.classList.remove('flex');
     document.body.classList.remove('overflow-hidden');
+}
+
+// ── Agenda number suggestions for PNBP ──
+// Create a shared datalist element for agenda number suggestions
+if (!document.getElementById('agendaSuggestions')) {
+    const datalist = document.createElement('datalist');
+    datalist.id = 'agendaSuggestions';
+    document.body.appendChild(datalist);
+}
+
+function updateAgendaSuggestions() {
+    const datalist = document.getElementById('agendaSuggestions');
+    if (!datalist) return;
+    const inputs = document.querySelectorAll('.agenda-number-input');
+    const values = new Set();
+    inputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) values.add(val);
+    });
+    datalist.innerHTML = Array.from(values).map(v => `<option value="${v}">`).join('');
 }
 
 // Allow escape key to close this modal
