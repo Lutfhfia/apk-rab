@@ -32,7 +32,7 @@ const configs = {
             <td class="py-3 px-3"><input type="number" name="items[${i-1}][volume]" required step="0.01" min="0.01" value="1" class="w-20 ${nc} calc-trigger"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][unit]" required class="w-20 ${ic}" placeholder="pcs" value="pcs"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][unit_price]" required class="w-32 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
-            <td class="py-3 px-3"><input type="text" name="items[${i-1}][admin_fee]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" value="0" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][admin_fee]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3 font-bold text-gray-800 row-total">Rp 0</td>
             <td class="py-3 px-3"><input type="date" name="items[${i-1}][transaction_date]" required class="${ic}"></td>
             <td class="py-3 px-3">${delBtn}</td>`,
@@ -53,9 +53,9 @@ const configs = {
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][bank_account_number]" required class="w-28 ${ic}" placeholder="No. Rek"></td>
             <td class="py-3 px-3"><input type="number" name="items[${i-1}][attendance_days]" required min="0" class="w-16 ${nc} calc-trigger" placeholder="0"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][base_salary]" required class="w-32 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
-            <td class="py-3 px-3"><input type="text" name="items[${i-1}][meal_allowance_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" value="0" oninput="formatMoney(this)"></td>
-            <td class="py-3 px-3"><input type="text" name="items[${i-1}][transport_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="20.000" value="20.000" oninput="formatMoney(this)"></td>
-            <td class="py-3 px-3"><input type="text" name="items[${i-1}][overtime]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" value="0" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][meal_allowance_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][transport_daily]" class="w-28 ${nc} calc-trigger money-input" placeholder="20.000" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][overtime]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3 font-bold text-gray-800 row-total">Rp 0</td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][notes]" class="${ic}" placeholder="Catatan"></td>
             <td class="py-3 px-3">${delBtn}</td>`,
@@ -77,7 +77,7 @@ const configs = {
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][registration_number]" class="w-28 ${ic}" placeholder="No. Regist/ID"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][account_name]" class="w-28 ${ic}" placeholder="A/N"></td>
             <td class="py-3 px-3"><input type="text" name="items[${i-1}][total_expense]" required class="w-36 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
-            <td class="py-3 px-3"><input type="text" name="items[${i-1}][admin_fee]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" value="0" oninput="formatMoney(this)"></td>
+            <td class="py-3 px-3"><input type="text" name="items[${i-1}][admin_fee]" class="w-28 ${nc} calc-trigger money-input" placeholder="0" oninput="formatMoney(this)"></td>
             <td class="py-3 px-3 font-bold text-gray-800 row-total">Rp 0</td>
             <td class="py-3 px-3"><input type="date" name="items[${i-1}][transaction_date]" required class="${ic}"></td>
             <td class="py-3 px-3">${delBtn}</td>`,

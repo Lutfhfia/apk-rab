@@ -61,6 +61,7 @@ class UserManagementController extends Controller
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
             'role' => ['required', Rule::in([UserRole::ADMIN_KEUANGAN->value, UserRole::MANAJER_OPERASIONAL->value])],
+            'phone_number' => 'nullable|string|max:20',
         ]);
 
         User::create([
@@ -68,6 +69,7 @@ class UserManagementController extends Controller
             'email' => $request->email,
             'password' => $request->password,
             'role' => $request->role,
+            'phone_number' => $request->phone_number,
             'is_active' => true,
         ]);
 
@@ -101,6 +103,7 @@ class UserManagementController extends Controller
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:6',
             'role' => ['required', Rule::in($allowedRoles)],
+            'phone_number' => 'nullable|string|max:20',
             'is_active' => 'required|boolean',
         ]);
 
@@ -108,6 +111,7 @@ class UserManagementController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'phone_number' => $request->phone_number,
             'is_active' => $request->is_active,
         ]);
 

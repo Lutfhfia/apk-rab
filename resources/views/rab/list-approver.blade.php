@@ -239,7 +239,7 @@
         <div class="p-5 flex-1 overflow-y-auto min-h-0">
 
             {{-- Info Cards --}}
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                 <div class="bg-gray-50 rounded-xl p-4">
                     <p class="text-xs font-bold text-gray-400 uppercase">Pembuat</p>
                     <p class="text-sm font-semibold text-gray-800 mt-1">{{ $rab->user->name ?? '-' }}</p>
@@ -266,6 +266,24 @@
             </div>
             @endif
 
+            {{-- Rejection Alert --}}
+            @if($rab->status === \App\Enums\RabStatus::DITOLAK)
+                @php
+                    $latestRejection = $rab->approvals->where('status', \App\Enums\ApprovalStatus::REJECTED)->sortByDesc('created_at')->first();
+                @endphp
+                @if($latestRejection)
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-5">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-red-500 mr-3 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>
+                            <h4 class="text-sm font-bold text-red-800">RAB Ditolak oleh {{ $latestRejection->user->name ?? 'Sistem' }}</h4>
+                            <p class="text-sm text-red-700 mt-1">Alasan: {{ $latestRejection->notes }}</p>
+                            <p class="text-xs text-red-500 mt-1">{{ $latestRejection->created_at->format('d M Y, H:i') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            @endif
             {{-- ============================================= --}}
             {{-- Tabel Rincian Item (per Jenis Pengeluaran) --}}
             {{-- ============================================= --}}
@@ -520,7 +538,7 @@
                     <h4 class="text-sm font-bold text-gray-800">Informasi Pembayaran</h4>
                 </div>
                 <div class="p-4">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div><p class="text-xs font-bold text-gray-400 uppercase">Tanggal Bayar</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_date->format('d/m/Y') }}</p></div>
                         <div><p class="text-xs font-bold text-gray-400 uppercase">Nominal</p><p class="text-sm font-semibold mt-1 text-emerald-600">Rp {{ number_format($rab->payment->paid_amount, 0, ',', '.') }}</p></div>
                         <div><p class="text-xs font-bold text-gray-400 uppercase">Metode</p><p class="text-sm font-semibold mt-1">{{ $rab->payment->payment_method }}</p></div>

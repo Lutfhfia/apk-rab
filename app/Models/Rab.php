@@ -193,22 +193,32 @@ class Rab extends Model
         ]);
     }
 
-    public function notifyUser(int $userId, string $title, string $message): RabNotification
+    public function notifyUser(int $userId, string $title, string $message, ?string $waMessage = null): RabNotification
     {
-        return $this->notifications()->create([
+        $notification = $this->notifications()->create([
             'user_id' => $userId,
             'title' => $title,
             'message' => $message,
         ]);
+
+        $user = User::find($userId);
+        if ($user && !empty($user->phone_number)) {
+            $textToSend = $waMessage ?: "*{$title}*\n\n{$message}";
+            \App\Services\WhatsAppService::send($user->phone_number, $textToSend);
+        }
+
+        return $notification;
     }
 
-    public function notifyRole(string $role, string $title, string $message, ?int $exceptUserId = null): void
+    public function notifyRole(string $role, string $title, string $message, ?int $exceptUserId = null, ?string $waMessage = null): void
     {
         User::where('role', $role)
             ->where('is_active', true)
             ->when($exceptUserId, fn ($query) => $query->where('id', '!=', $exceptUserId))
             ->get()
-            ->each(fn (User $user) => $this->notifyUser($user->id, $title, $message));
+            ->each(function (User $user) use ($title, $message, $waMessage) {
+                $this->notifyUser($user->id, $title, $message, $waMessage);
+            });
     }
 
     private function numberToIndonesianWords(int $number): string

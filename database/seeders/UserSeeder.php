@@ -30,7 +30,7 @@ class UserSeeder extends Seeder
                 'password' => 'password',
                 'role' => 'direktur',
                 'is_active' => true,
-            ], //php artisan db:seed //php artisan db:seed --class=NamaSeeder //php artisan migrate:fresh --seed
+            ], //jika setelah melakukkan perubahan pada database //php artisan db:seed //php artisan db:seed --class=NamaSeeder //php artisan migrate:fresh --seed
         ];
 
         foreach ($users as $userData) {

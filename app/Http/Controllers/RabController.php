@@ -62,18 +62,26 @@ class RabController extends Controller
 
         $sortDir = $request->input('sort') === 'asc' ? 'asc' : 'desc';
         $rabs = $query->orderBy('created_at', $sortDir)->paginate(15);
-        $expenseTypes = ExpenseType::where('is_active', true)->get();
-        $submittedRabForWhatsApp = session('submitted_rab_id')
-            ? Rab::with([
+        
+        if ($request->filled('open_rab_id')) {
+            $openedRab = Rab::with([
                 'user',
                 'expenseType',
                 'operationalExpenseItems',
                 'pettyCashItems',
                 'salaryExpenseItems',
                 'monthlyExpenseItems',
-            ])->find(session('submitted_rab_id'))
-            : null;
-
+                'approvals.user',
+                'discussions.user',
+                'payment.paidBy',
+                'auditLogs.user',
+            ])->find($request->open_rab_id);
+            
+            if ($openedRab && !$rabs->contains('id', $openedRab->id)) {
+                $rabs->getCollection()->push($openedRab);
+            }
+        }
+        $expenseTypes = ExpenseType::where('is_active', true)->get();
         $rabNumber = Rab::generateNumber();
 
         $statusCounts = Rab::select('status', DB::raw('count(*) as count'))
@@ -81,7 +89,7 @@ class RabController extends Controller
             ->pluck('count', 'status')
             ->toArray();
 
-        return view('rab.index', compact('rabs', 'expenseTypes', 'submittedRabForWhatsApp', 'rabNumber', 'statusCounts'));
+        return view('rab.index', compact('rabs', 'expenseTypes', 'rabNumber', 'statusCounts'));
     }
 
     /**
@@ -141,6 +149,25 @@ class RabController extends Controller
 
         $sortDir = $request->input('sort') === 'asc' ? 'asc' : 'desc';
         $rabs = $query->orderBy('created_at', $sortDir)->paginate(15);
+        
+        if ($request->filled('open_rab_id')) {
+            $openedRab = Rab::with([
+                'user',
+                'expenseType',
+                'operationalExpenseItems',
+                'pettyCashItems',
+                'salaryExpenseItems',
+                'monthlyExpenseItems',
+                'approvals.user',
+                'discussions.user',
+                'payment.paidBy',
+                'auditLogs.user',
+            ])->find($request->open_rab_id);
+            
+            if ($openedRab && !$rabs->contains('id', $openedRab->id)) {
+                $rabs->getCollection()->push($openedRab);
+            }
+        }
         $expenseTypes = ExpenseType::where('is_active', true)->get();
 
         $statusCounts = Rab::select('status', DB::raw('count(*) as count'))
@@ -221,16 +248,13 @@ class RabController extends Controller
                     : "RAB {$rab->rab_number} dibuat sebagai draft oleh " . auth()->user()->name,
                 rabId: $rab->id
             );
-
             if ($request->action === 'submit') {
-                $rab->addDiscussionNote(
-                    auth()->id(),
-                    "Mohon persetujuan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
-                );
                 $rab->notifyRole(
                     UserRole::MANAJER_OPERASIONAL->value,
                     'RAB baru perlu diperiksa',
-                    'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
+                    'Admin Keuangan ' . auth()->user()->name . " mengajukan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-'),
+                    null,
+                    $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab))
                 );
             }
 
@@ -360,16 +384,13 @@ class RabController extends Controller
                 oldValues: $oldValues,
                 newValues: $rab->fresh()->toArray()
             );
-
             if ($request->action === 'submit') {
-                $rab->addDiscussionNote(
-                    auth()->id(),
-                    "Mohon pemeriksaan ulang RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
-                );
                 $rab->notifyRole(
                     UserRole::MANAJER_OPERASIONAL->value,
                     'RAB revisi perlu diperiksa',
-                    'Admin Keuangan ' . auth()->user()->name . " mengajukan kembali RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-')
+                    'Admin Keuangan ' . auth()->user()->name . " mengajukan kembali RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? '-'),
+                    null,
+                    $rab->buildWhatsAppSubmissionMessage(route('manajer.rab.show', $rab))
                 );
             }
 
@@ -437,11 +458,7 @@ class RabController extends Controller
             rabId: $rab->id
         );
 
-        $rab->loadMissing('expenseType');
-        $rab->addDiscussionNote(
-            auth()->id(),
-            "Mohon persetujuan RAB {$rab->rab_number} untuk " . ($rab->expenseType->name ?? 'pengajuan ini') . '.'
-        );
+
         $rab->notifyRole(
             UserRole::MANAJER_OPERASIONAL->value,
             'RAB baru perlu diperiksa',
@@ -605,7 +622,16 @@ class RabController extends Controller
         $companyAddress = \App\Models\Setting::getValue('company_address', '-');
         $companyPhone   = \App\Models\Setting::getValue('company_phone', '-');
         $companyEmail   = \App\Models\Setting::getValue('company_email', '-');
-        $signerName     = 'Mery Eryanti';
+        
+        // Ambil nama Manajer Operasional (prioritaskan yang meng-approve, jika belum ada ambil dari database user)
+        $managerApproval = $rab->approvals->where('role', \App\Enums\UserRole::MANAJER_OPERASIONAL->value)->where('status', \App\Enums\ApprovalStatus::APPROVED)->first();
+        if ($managerApproval && $managerApproval->user) {
+            $signerName = $managerApproval->user->name;
+        } else {
+            $manager = \App\Models\User::where('role', \App\Enums\UserRole::MANAJER_OPERASIONAL->value)->first();
+            $signerName = $manager ? $manager->name : 'Mery Eryanti';
+        }
+        
         $signerPosition = 'Manajer Operasional';
 
         $data = compact(

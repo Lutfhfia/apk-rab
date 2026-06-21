@@ -230,6 +230,9 @@ class ReportExportController extends Controller
             9 => 'IX', 10 => 'X', 11 => 'XI', 12 => 'XII',
         ];
 
-        return 'XXX/LAP-AK/SBK/' . $romanMonths[$month] . '/' . $year;
+        $reportCount = ReportExport::whereYear('created_at', $year)->count() + 1;
+        $paddedCount = str_pad($reportCount, 3, '0', STR_PAD_LEFT);
+
+        return $paddedCount . '/LAP-AK/SBK/' . $romanMonths[$month] . '/' . $year;
     }
 }

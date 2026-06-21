@@ -45,6 +45,11 @@
                     <input type="email" name="email" value="{{ old('email', $user->email) }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                 </div>
                 <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1.5">Nomor WhatsApp</label>
+                    <input type="text" name="phone_number" value="{{ old('phone_number', $user->phone_number) }}" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none" placeholder="Contoh: 08123456789">
+                    <p class="text-[10px] text-gray-400 mt-1">Digunakan untuk menerima notifikasi persetujuan RAB secara langsung via WhatsApp.</p>
+                </div>
+                <div>
                     <label class="block text-xs font-bold text-gray-500 mb-1.5">Role *</label>
                     <select name="role" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                         @foreach(\App\Enums\UserRole::cases() as $role)

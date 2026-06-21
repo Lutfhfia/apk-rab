@@ -58,6 +58,11 @@
                     <label class="block text-xs font-bold text-gray-500 mb-1">Email *</label>
                     <input type="email" name="email" value="{{ old('email', Auth::user()->email) }}" required class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
                 </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 mb-1">Nomor WhatsApp (Aktif)</label>
+                    <input type="text" name="phone_number" value="{{ old('phone_number', Auth::user()->phone_number) }}" placeholder="Contoh: 08123456789" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none">
+                    <p class="text-[10px] text-gray-400 mt-1">Digunakan untuk menerima notifikasi persetujuan RAB secara langsung via WhatsApp.</p>
+                </div>
 
 
 

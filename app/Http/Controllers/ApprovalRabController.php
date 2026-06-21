@@ -55,14 +55,13 @@ class ApprovalRabController extends Controller
             );
 
             $rab->loadMissing('expenseType');
-            $rab->addDiscussionNote(
-                auth()->id(),
-                $request->notes ?: 'Rincian sudah sesuai, saya teruskan ke Direktur.'
-            );
+
             $rab->notifyRole(
                 UserRole::DIREKTUR->value,
                 'RAB perlu diperiksa Direktur',
-                "Manager Operasional menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur."
+                "Manager Operasional menyetujui RAB {$rab->rab_number} dan meneruskan pengajuan kepada Direktur.",
+                null,
+                "*RAB Baru Perlu Diperiksa*\n\nManager Operasional telah menyetujui RAB *{$rab->rab_number}* dan meneruskannya kepada Anda untuk persetujuan akhir.\nSilakan cek aplikasi untuk menindaklanjuti:\n" . route('direktur.rab.show', $rab)
             );
 
             DB::commit();
@@ -116,14 +115,12 @@ class ApprovalRabController extends Controller
                 rabId: $rab->id
             );
 
-            $rab->addDiscussionNote(
-                auth()->id(),
-                $request->notes ?: 'Disetujui. Silakan diproses pembayaran.'
-            );
+
             $rab->notifyUser(
                 $rab->user_id,
                 'RAB disetujui Direktur',
-                "Direktur menyetujui RAB {$rab->rab_number}. RAB siap diproses pembayaran."
+                "Direktur menyetujui RAB {$rab->rab_number}. RAB siap diproses pembayaran.",
+                "*RAB Disetujui Direktur*\n\nDirektur telah menyetujui pengajuan RAB *{$rab->rab_number}*. RAB sudah siap untuk diproses pembayarannya.\nSilakan cek sistem:\n" . route('rab.show', $rab)
             );
 
             DB::commit();
@@ -176,11 +173,12 @@ class ApprovalRabController extends Controller
                 rabId: $rab->id
             );
 
-            $rab->addDiscussionNote(auth()->id(), $request->notes);
+
             $rab->notifyUser(
                 $rab->user_id,
                 'RAB dikembalikan untuk diperbaiki',
-                "RAB {$rab->rab_number} dikembalikan untuk diperbaiki. Silakan cek catatan."
+                "RAB {$rab->rab_number} dikembalikan untuk diperbaiki. Silakan cek catatan.",
+                "*RAB Ditolak/Dikembalikan*\n\nRAB *{$rab->rab_number}* telah dikembalikan oleh " . auth()->user()->name . " dengan catatan penolakan:\n_" . $request->notes . "_\n\nSilakan cek aplikasi untuk memperbaikinya:\n" . route('rab.show', $rab)
             );
 
             DB::commit();

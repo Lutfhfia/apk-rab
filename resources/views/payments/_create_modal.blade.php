@@ -66,7 +66,7 @@
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-gray-500 mb-1.5">Bukti Transfer * (JPG, PNG, PDF max 100KB)</label>
+                            <label class="block text-xs font-bold text-gray-500 mb-1.5">Bukti Transfer * (JPG, PNG, PDF max 1MB)</label>
                             <input type="file" name="proof_file" required accept=".jpg,.jpeg,.png,.pdf" class="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none file:mr-4 file:py-1 file:px-4 file:rounded-lg file:border-0 file:bg-emerald-50 file:text-emerald-700 file:font-bold file:text-xs" onchange="window['validateProofFileSize_{{ $rab->id }}'](this)">
                         </div>
                         <div>
@@ -106,9 +106,9 @@
     function validateFileSize(input) {
         if (!input.files || input.files.length === 0) return;
         const file = input.files[0];
-        const maxSize = 100 * 1024; // 100KB in bytes
+        const maxSize = 1024 * 1024; // 1MB in bytes
         if (file.size > maxSize) {
-            alert('Ukuran file bukti transfer maksimal adalah 100KB. File yang Anda pilih berukuran: ' + (file.size / 1024).toFixed(1) + 'KB.');
+            alert('Ukuran file bukti transfer maksimal adalah 1MB. File yang Anda pilih berukuran: ' + (file.size / (1024*1024)).toFixed(2) + 'MB.');
             input.value = ''; // clear input
         }
     }

@@ -19,11 +19,13 @@ class ProfileController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'phone_number' => 'nullable|string|max:20',
             'avatar_data' => 'nullable|string', // Base64 image data from cropper
         ]);
 
         $user->name = $request->name;
         $user->email = $request->email;
+        $user->phone_number = $request->phone_number;
 
         // Process avatar data if provided
         if ($request->filled('avatar_data')) {

@@ -37,13 +37,13 @@ class PaymentController extends Controller
             'payment_method' => 'required|string',
             'recipient_account' => 'nullable|string',
             'recipient_name' => 'nullable|string',
-            'proof_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:100',
+            'proof_file' => 'required|file|mimes:jpg,jpeg,png,pdf|max:1024',
             'notes' => 'nullable|string',
         ]);
 
         $lastBalance = CashFlow::orderBy('id', 'desc')->value('balance') ?? 0;
-        if ($request->paid_amount > $lastBalance) {
-            return back()->withInput()->withErrors(['paid_amount' => 'Saldo tidak mencukupi untuk pembayaran ini. Saldo tersedia: Rp ' . number_format($lastBalance, 0, ',', '.')]);
+        if ((float) $request->paid_amount > (float) $lastBalance) {
+            return back()->withInput()->with('error', 'Gagal: Saldo Kas/Bank saat ini tidak mencukupi untuk melakukan pembayaran ini. Saldo tersedia: Rp ' . number_format($lastBalance, 0, ',', '.'));
         }
 
         DB::beginTransaction();
@@ -80,7 +80,7 @@ class PaymentController extends Controller
             ]);
 
             AuditLog::log('upload_payment', "Pembayaran RAB {$rab->rab_number} oleh " . auth()->user()->name, rabId: $rab->id);
-            $rab->addDiscussionNote(auth()->id(), $request->notes ?: 'Bukti pembayaran telah diunggah.');
+
             DB::commit();
             return back()->with('success', 'Upload bukti pembayaran berhasil!');
         } catch (\Exception $e) {

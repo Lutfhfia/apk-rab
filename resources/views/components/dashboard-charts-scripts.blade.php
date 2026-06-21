@@ -17,55 +17,6 @@
             return Math.max(Math.ceil(Math.max(...values, 1000000) * 1.2), 1000000);
         };
 
-        const budgetChart = new Chart(document.getElementById('budgetChart').getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: {!! json_encode($chartLabels) !!},
-                datasets: [
-                    {
-                        label: 'Anggaran (Rencana)',
-                        data: {!! json_encode($chartAnggaran) !!},
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'transparent',
-                        tension: 0,
-                        pointBackgroundColor: '#3b82f6',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'Realisasi (Aktual)',
-                        data: {!! json_encode($chartRealisasi) !!},
-                        borderColor: '#10b981',
-                        backgroundColor: 'transparent',
-                        fill: false,
-                        tension: 0,
-                        pointBackgroundColor: '#10b981',
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
-                        borderWidth: 2
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { size: 11, family: "'Inter', sans-serif" } } },
-                    tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${currencyFormat(context.parsed.y)}` } }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: maxWithPadding({!! json_encode($chartAnggaran) !!}, {!! json_encode($chartRealisasi) !!}),
-                        ticks: { callback: shortFormat, font: { size: 10 } },
-                        grid: { color: '#f3f4f6', drawBorder: false }
-                    },
-                    x: { grid: { display: false, drawBorder: false }, ticks: { font: { size: 11 } } }
-                }
-            }
-        });
-
         const pieLabelsLinePlugin = {
             id: 'pieLabelsLine',
             afterDraw(chart) {
@@ -168,29 +119,39 @@
 
         const cashflowCanvas = document.getElementById('cashflowChart');
         const cashflowChart = cashflowCanvas ? new Chart(cashflowCanvas.getContext('2d'), {
-            type: 'bar',
+            type: 'line',
             data: {
                 labels: {!! json_encode($cfLabels) !!},
                 datasets: [
                     {
+                        type: 'line',
+                        label: 'Uang Masuk',
+                        data: {!! json_encode($cfIn) !!},
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    },
+                    {
+                        type: 'line',
+                        label: 'Uang Keluar',
+                        data: {!! json_encode($cfOut) !!},
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    },
+                    {
                         type: 'bar',
                         label: 'Saldo Akhir',
                         data: {!! json_encode($cfBalance) !!},
-                        backgroundColor: '#0ea5e9',
-                        borderRadius: 2
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Uang Masuk',
-                        data: {!! json_encode($cfIn) !!},
-                        backgroundColor: '#10b981',
-                        borderRadius: 2
-                    },
-                    {
-                        type: 'bar',
-                        label: 'Uang Keluar',
-                        data: {!! json_encode($cfOut) !!},
-                        backgroundColor: '#ef4444',
+                        backgroundColor: 'rgba(14, 165, 233, 0.3)',
                         borderRadius: 2
                     }
                 ]
@@ -238,8 +199,8 @@
             datasets.forEach((data, index) => {
                 chart.data.datasets[index].data = data || [];
             });
-            if (chart === budgetChart) {
-                chart.options.scales.y.max = maxWithPadding(datasets[0] || [], datasets[1] || []);
+            if (chart === cashflowChart) {
+                // Not doing maxWithPadding for cashflow because it's a mixed chart
             }
             chart.update();
         };
@@ -267,9 +228,6 @@
 
                     const payload = await response.json();
 
-                    if (target === 'budget') {
-                        setChartData(budgetChart, payload.budget.labels, [payload.budget.anggaran, payload.budget.realisasi]);
-                    }
                     if (target === 'status') {
                         setChartData(statusChart, payload.status.labels, [payload.status.data]);
                     }

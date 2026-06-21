@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Sistem RAB') - PT SBK</title>
+    <link rel="icon" type="image/png" href="{{ asset('foto/logo_sbk.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,24 +43,35 @@
         body.sidebar-collapsed .logout-btn { padding-left: 0; padding-right: 0; justify-content: center; }
         body.sidebar-collapsed .logout-btn svg { margin-right: 0; }
 
-        @media (max-width: 768px) {
-            body { @apply flex-col h-auto min-h-screen overflow-auto; }
-            #sidebar { @apply w-full flex-shrink-0; }
-            #sidebarToggleBtn { @apply hidden; }
-            .sidebar-header { @apply py-4; }
-            .logo-img { @apply h-12; }
-            nav { @apply mt-3 px-3; }
-            nav ul { @apply grid grid-cols-2 gap-2; }
-            .sidebar-link { @apply justify-center text-center px-3 py-2; }
-            .sidebar-link svg.sidebar-icon { @apply mr-2; }
-            .logout-btn { @apply py-2; }
-            header { @apply h-auto min-h-16 px-4 py-3 items-start gap-3; }
-            header > div:last-child { @apply space-x-2; }
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                height: 100vh;
+                z-index: 40;
+                transform: translateX(-100%);
+            }
+            body.sidebar-open #sidebar {
+                transform: translateX(0);
+                width: 16rem; /* fixed width on mobile */
+            }
+            /* Ensure sidebar content is visible on mobile when open */
+            body.sidebar-open .sidebar-text,
+            body.sidebar-open .sidebar-title,
+            body.sidebar-open .logout-text { display: inline; }
+            body.sidebar-open .sidebar-link { justify-content: flex-start; padding-left: 1rem; padding-right: 1rem; }
+            body.sidebar-open .sidebar-link svg.sidebar-icon { margin-right: 0.5rem; }
+            body.sidebar-open .sidebar-header { padding: 1.5rem 1rem; }
+            body.sidebar-open .logo-container { padding: 0.75rem; width: auto; justify-content: flex-start; }
+            body.sidebar-open .logo-img { height: 4rem; width: auto; max-width: none; }
+            body.sidebar-open .logout-btn { padding-left: 1rem; padding-right: 1rem; justify-content: center; }
+            body.sidebar-open .logout-btn svg { margin-right: 0.5rem; }
+
+            header { @apply h-16 px-4 gap-2; }
             main { @apply p-4; }
-            body.sidebar-collapsed #sidebar { width: 100%; }
-            body.sidebar-collapsed .sidebar-text,
-            body.sidebar-collapsed .sidebar-title,
-            body.sidebar-collapsed .logout-text { display: inline; }
         }
     </style>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
@@ -75,14 +87,11 @@
         }
     </script>
 
+    {{-- Mobile Sidebar Overlay --}}
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden transition-opacity lg:hidden" onclick="toggleMobileSidebar()"></div>
+
     {{-- ========== SIDEBAR ========== --}}
-    <aside id="sidebar" class="w-64 bg-[#1E293B] text-white flex flex-col justify-between shadow-xl z-30 flex-shrink-0 transition-all duration-300 ease-in-out relative">
-        {{-- Toggle Button --}}
-        <button type="button" id="sidebarToggleBtn" class="absolute -right-6 top-5 bg-blue-500 hover:bg-blue-600 text-white w-6 h-10 flex items-center justify-center rounded-r-lg shadow-md cursor-pointer transition-colors z-[40]">
-            <svg id="sidebarToggleIcon" class="w-4 h-4 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
-            </svg>
-        </button>
+    <aside id="sidebar" class="w-64 bg-[#1E293B] text-white flex flex-col justify-between shadow-xl z-40 flex-shrink-0 transition-all duration-300 ease-in-out relative">
 
         <div>
             {{-- Logo Area --}}
@@ -118,15 +127,19 @@
     {{-- ========== MAIN CONTENT ========== --}}
     <div class="flex-1 flex flex-col relative overflow-hidden">
         {{-- Header --}}
-        <header class="bg-white h-20 border-b border-gray-200 flex items-center justify-between px-8 shadow-sm z-10 flex-shrink-0 transition-all duration-300">
-            <div class="flex items-center gap-4">
+        <header class="bg-white h-16 sm:h-20 border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 shadow-sm z-10 flex-shrink-0 transition-all duration-300 sticky top-0">
+            <div class="flex items-center gap-3 sm:gap-4">
+                {{-- Hamburger Menu for Sidebar --}}
+                <button type="button" id="sidebarToggleBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-xl transition flex items-center justify-center">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
                 <div>
-                    <h1 class="text-xl font-extrabold text-gray-800">@yield('page-title', 'Dashboard')</h1>
-                    <p class="text-sm text-gray-500 font-medium hidden sm:block">@yield('page-subtitle', 'Aplikasi Rancangan Anggaran Biaya')</p>
+                    <h1 class="text-base sm:text-xl font-extrabold text-gray-800 leading-tight">@yield('page-title', 'Dashboard')</h1>
+                    <p class="text-[10px] sm:text-sm text-gray-500 font-medium hidden md:block">@yield('page-subtitle', 'Aplikasi Rancangan Anggaran Biaya')</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-6">
-                <div class="text-right border-r border-gray-300 pr-6 hidden md:block">
+            <div class="flex items-center space-x-2 sm:space-x-6">
+                <div class="text-right border-r border-gray-300 pr-6 hidden lg:block">
                     @php
                         \Carbon\Carbon::setLocale('id');
                         $hour = \Carbon\Carbon::now()->timezone('Asia/Jakarta')->hour;
@@ -290,14 +303,29 @@
 
     <script>
         // Hamburger Menu Toggle
+        function toggleMobileSidebar() {
+            document.body.classList.toggle('sidebar-open');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (document.body.classList.contains('sidebar-open')) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('block');
+            } else {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('block');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             const toggleBtn = document.getElementById('sidebarToggleBtn');
             const body = document.body;
 
             toggleBtn.addEventListener('click', function() {
-                body.classList.toggle('sidebar-collapsed');
-                // Save state
-                localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
+                if (window.innerWidth <= 1024) {
+                    toggleMobileSidebar();
+                } else {
+                    body.classList.toggle('sidebar-collapsed');
+                    localStorage.setItem('sidebar-collapsed', body.classList.contains('sidebar-collapsed'));
+                }
             });
         });
 
